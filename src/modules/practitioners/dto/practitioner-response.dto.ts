@@ -1,0 +1,30 @@
+export class PractitionerResponseDto {
+  id: string;
+  user_id: string | null;
+  specialty: string;
+  title: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+  phone: string | null;
+  bio: string | null;
+  education: string | null;
+  license_number: string | null;
+  consultation_fee: number | null;
+  years_of_experience: number | null;
+  languages: string[];
+  calendar_color: string;
+  profile_image_url: string | null;
+  accepts_new_patients: boolean;
+  max_patients_per_day: number | null;
+  appointment_buffer_minutes: number;
+  is_active: boolean;
+  date_of_birth: string | null;
+  gender: string | null;
+  nationality: string | null;
+  address: string | null;
+  city: string | null;
+  postal_code: string | null;
+  created_at: Date;
+  updated_at: Date;
+}

@@ -1,0 +1,28 @@
+export class PatientResponseDto {
+  id: string;
+  user_id: string | null;
+  first_name: string;
+  last_name: string;
+  email: string | null;
+  phone: string | null;
+  date_of_birth: string | null;
+  gender: string | null;
+  blood_type: string | null;
+  address: string | null;
+  city: string | null;
+  postal_code: string | null;
+  nationality: string | null;
+  occupation: string | null;
+  marital_status: string | null;
+  preferred_language: string;
+  social_security_number: string | null;
+  insurance_provider: string | null;
+  insurance_number: string | null;
+  emergency_contact_name: string | null;
+  emergency_contact_phone: string | null;
+  allergies: string | null;
+  medical_notes: string | null;
+  notes: string | null;
+  created_at: Date;
+  updated_at: Date;
+}
