@@ -60,12 +60,13 @@ import { SnakeCaseInterceptor } from './common/interceptors/snake-case.intercept
 import { createAdminUser } from './database/seeders/admin.seeder';
 import { seedAppointmentTypes } from './database/seeders/appointment-types.seeder';
 import { seedBillableItems } from './database/seeders/billable-items.seeder';
+import { api_prefix } from './config/globalVar';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   // Global prefix
-  app.setGlobalPrefix('api/v1');
+  app.setGlobalPrefix(process.env.API_PREFIX || api_prefix || 'api/v1');
 
   // CORS - Important pour le frontend React
   app.enableCors({

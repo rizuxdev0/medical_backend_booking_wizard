@@ -17,6 +17,7 @@ import { PermissionsModule } from './modules/permissions/permissions.module';
 import { ConsultationNotesModule } from './modules/consultation-notes/consultation-notes.module';
 import { CurrenciesModule } from './modules/currencies/currencies.module';
 import { GuardsModule } from './modules/guards/guards.module';
+import { HealthModule } from './modules/health/health.module';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { GuardsModule } from './modules/guards/guards.module';
     NotificationsModule,
     PermissionsModule,
     ConsultationNotesModule,
+    HealthModule,
   ],
   controllers: [],
   providers: [],
