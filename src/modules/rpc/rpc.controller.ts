@@ -22,8 +22,18 @@ export class RpcController {
   @Get('is-setup-completed')
   @ApiOperation({ summary: 'Vérifier si le setup est terminé' })
   async setupCompleted() {
-    const exists = await this.usersService.adminExists();
-    return { completed: exists };
+    // 1. Check if an admin user actually exists
+    const adminExists = await this.usersService.adminExists();
+    if (!adminExists) return { completed: false };
+
+    // 2. Check if setup_completed flag is set in settings
+    const setupStep = await this.settingsService.findOne('setup_completed').catch(() => null);
+    if (setupStep && setupStep.value === true) {
+      return { completed: true };
+    }
+
+    // Default to true if admin exists but setting is missing (legacy)
+    return { completed: adminExists };
   }
 
   @Post('bootstrap-admin')

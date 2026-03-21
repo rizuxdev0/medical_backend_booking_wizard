@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { UsersService } from './users.service';
+import { PermissionsService } from '../permissions/permissions.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -27,7 +28,16 @@ import { AddRoleDto } from './dto/add-role.dto';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('admin')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly permissionsService: PermissionsService,
+  ) {}
+
+  @Get(':id/permissions')
+  @ApiOperation({ summary: 'Récupérer toutes les permissions consolidées d\'un utilisateur' })
+  getUserPermissions(@Param('id') id: string) {
+    return this.permissionsService.getConsolidatedUserPermissions(id);
+  }
 
   @Get()
   @ApiOperation({ summary: 'Liste tous les utilisateurs (admin uniquement)' })

@@ -222,6 +222,20 @@ export class NotificationsService {
     return { count };
   }
 
+  async delete(id: string): Promise<void> {
+    await this.logRepo.delete(id);
+  }
+
+  async clearAll(userId?: string, patientId?: string): Promise<void> {
+    const whereCondition: any = {};
+    if (userId) whereCondition.userId = userId;
+    if (patientId) whereCondition.patientId = patientId;
+    
+    if (Object.keys(whereCondition).length > 0) {
+      await this.logRepo.delete(whereCondition);
+    }
+  }
+
   // ==================== MÉTHODES PRIVÉES ====================
 
   private mapToResponse(notification: Notification): NotificationResponseDto {

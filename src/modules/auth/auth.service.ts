@@ -10,25 +10,6 @@
 // export class AuthService {
 //   constructor(
 //     @InjectRepository(Profile)
-//     private profileRepo: Repository<Profile>,
-//     @InjectRepository(UserRole)
-//     private roleRepo: Repository<UserRole>,
-//     private jwtService: JwtService,
-//   ) {}
-
-//   async login(email: string, password: string) {
-//     const user = await this.profileRepo.findOne({
-//       where: { email },
-//     });
-
-//     if (!user || !(await bcrypt.compare(password, user.password_hash))) {
-//       throw new UnauthorizedException('Email ou mot de passe incorrect');
-//     }
-
-//     const roles = await this.roleRepo.find({
-//       where: { user_id: user.id },
-//     });
-
 //     const token = this.jwtService.sign({
 //       sub: user.id,
 //       email: user.email,
@@ -145,14 +126,22 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
-  async login(email: string, password: string) {
+  async login(loginDto: { email: string; password: string }) {
+    console.log(`[AUTH] Login attempt for email: ${loginDto.email}`);
     const user = await this.profileRepo.findOne({
-      where: { email },
+      where: { email: loginDto.email.toLowerCase().trim() },
     });
 
-    console.log(`[AUTH] Tentative de connexion pour ${email}. Utilisateur trouvé: ${!!user}`);
+    if (!user) {
+      console.warn(`[AUTH] User not found: ${loginDto.email}`);
+      throw new UnauthorizedException('Email ou mot de passe incorrect');
+    }
 
-    if (!user || !(await bcrypt.compare(password, user.password_hash))) {
+    const isMatch = await bcrypt.compare(loginDto.password, user.password_hash);
+    console.log(`[AUTH] Password match for ${user.email}: ${isMatch}`);
+
+    if (!isMatch) {
+      console.warn(`[AUTH] Password MISMATCH for ${user.email}`);
       throw new UnauthorizedException('Email ou mot de passe incorrect');
     }
 

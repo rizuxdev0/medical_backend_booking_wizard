@@ -181,25 +181,74 @@ export class PermissionsService implements OnModuleInit {
   private async seedDefaultPermissions() {
     const defaultPermissions = [
       // Patients
-      { code: 'patients.view', name: 'Voir les patients', module: 'patients' },
-      { code: 'patients.create', name: 'Créer des patients', module: 'patients' },
-      { code: 'patients.edit', name: 'Modifier des patients', module: 'patients' },
-      { code: 'patients.delete', name: 'Supprimer des patients', module: 'patients' },
+      { code: 'patients.view', name: 'Voir patients', module: 'patients' },
+      { code: 'patients.create', name: 'Créer patient', module: 'patients' },
+      { code: 'patients.edit', name: 'Modifier patient', module: 'patients' },
+      { code: 'patients.delete', name: 'Supprimer patient', module: 'patients' },
+      { code: 'patients.documents', name: 'Gérer les documents patients', module: 'patients' },
       // Appointments
-      { code: 'appointments.view', name: 'Voir les rendez-vous', module: 'appointments' },
-      { code: 'appointments.create', name: 'Créer des rendez-vous', module: 'appointments' },
-      { code: 'appointments.edit', name: 'Modifier des rendez-vous', module: 'appointments' },
-      { code: 'appointments.delete', name: 'Supprimer des rendez-vous', module: 'appointments' },
-      // Billing
-      { code: 'billing.view', name: 'Voir les factures', module: 'billing' },
-      { code: 'billing.create', name: 'Créer des factures', module: 'billing' },
-      { code: 'billing.manage', name: 'Gérer la facturation', module: 'billing' },
+      { code: 'appointments.view', name: 'Voir RDV', module: 'appointments' },
+      { code: 'appointments.create', name: 'Créer RDV', module: 'appointments' },
+      { code: 'appointments.edit', name: 'Modifier RDV', module: 'appointments' },
+      { code: 'appointments.delete', name: 'Annuler RDV', module: 'appointments' },
+      { code: 'appointments.close', name: 'Clôturer RDV', module: 'appointments' },
+      // Practitioners
+      { code: 'practitioners.view', name: 'Voir praticiens', module: 'practitioners' },
+      { code: 'practitioners.create', name: 'Créer praticien', module: 'practitioners' },
+      { code: 'practitioners.edit', name: 'Modifier praticien', module: 'practitioners' },
+      { code: 'practitioners.delete', name: 'Supprimer praticien', module: 'practitioners' },
       // Queue
-      { code: 'queue.manage', name: 'Gérer la file d\'attente', module: 'queue' },
-      { code: 'queue.view', name: 'Voir la file d\'attente', module: 'queue' },
-      // Admin/Users
-      { code: 'users.manage', name: 'Gérer les utilisateurs', module: 'users' },
-      { code: 'settings.manage', name: 'Gérer les paramètres', module: 'settings' },
+      { code: 'queue.view', name: 'Voir file', module: 'queue' },
+      { code: 'queue.manage', name: 'Gérer file', module: 'queue' },
+      // Billing
+      { code: 'billing.view', name: 'Voir factures', module: 'billing' },
+      { code: 'billing.create', name: 'Créer facture', module: 'billing' },
+      { code: 'billing.edit', name: 'Modifier facture', module: 'billing' },
+      { code: 'billing.delete', name: 'Supprimer facture', module: 'billing' },
+      // Payments
+      { code: 'payments.view', name: 'Voir paiements', module: 'billing' },
+      { code: 'payments.create', name: 'Enregistrer paiement', module: 'billing' },
+      // Settings
+      { code: 'settings.view', name: 'Voir paramètres', module: 'settings' },
+      { code: 'settings.edit', name: 'Modifier paramètres', module: 'settings' },
+      // Users
+      { code: 'users.view', name: 'Voir utilisateurs', module: 'users' },
+      { code: 'users.create', name: 'Créer un nouvel utilisateur', module: 'users' },
+      { code: 'users.edit', name: 'Modifier utilisateur', module: 'users' },
+      { code: 'users.deactivate', name: 'Désactiver un compte utilisateur', module: 'users' },
+      { code: 'users.manage_roles', name: 'Gérer les rôles', module: 'users' },
+      // Reports
+      { code: 'reports.view', name: 'Voir statistiques', module: 'reports' },
+      { code: 'reports.export', name: 'Exporter données', module: 'reports' },
+      // Audit
+      { code: 'audit.view', name: 'Voir audit', module: 'audit' },
+      { code: 'audit.export', name: 'Exporter audit', module: 'audit' },
+      // Resources
+      { code: 'resources.view', name: 'Voir ressources', module: 'resources' },
+      { code: 'resources.manage', name: 'Gérer ressources', module: 'resources' },
+      // Departments
+      { code: 'departments.view', name: 'Voir départements', module: 'departments' },
+      { code: 'departments.create', name: 'Créer nouveau département', module: 'departments' },
+      { code: 'departments.edit', name: 'Modifier département existant', module: 'departments' },
+      { code: 'departments.delete', name: 'Supprimer département', module: 'departments' },
+      // Checkout
+      { code: 'checkout.view', name: 'Voir caisse', module: 'checkout' },
+      { code: 'checkout.manage', name: 'Gérer sorties', module: 'checkout' },
+      // Chat
+      { code: 'chat.view', name: 'Voir messagerie', module: 'chat' },
+      { code: 'chat.send', name: 'Envoyer messages', module: 'chat' },
+      // Guards
+      { code: 'guards.view', name: 'Voir gardes', module: 'guards' },
+      { code: 'guards.manage', name: 'Gérer gardes', module: 'guards' },
+      // Absences
+      { code: 'absences.view', name: 'Voir absences', module: 'absences' },
+      { code: 'absences.manage', name: 'Gérer absences', module: 'absences' },
+      // Currencies
+      { code: 'currencies.view', name: 'Voir devises', module: 'currencies' },
+      { code: 'currencies.manage', name: 'Gérer devises', module: 'currencies' },
+      // Notifications
+      { code: 'notifications.view', name: 'Voir notifications', module: 'notifications' },
+      { code: 'notifications.manage', name: 'Gérer notifications', module: 'notifications' },
     ];
 
     for (const p of defaultPermissions) {
@@ -219,8 +268,14 @@ export class PermissionsService implements OnModuleInit {
            }));
         }
       }
-      // Add more specific role mappings here if needed
     }
+  }
+
+  async getConsolidatedUserPermissions(userId: string): Promise<string[]> {
+    // This is a placeholder. In a real system, you'd fetch roles for userId 
+    // then fetch all permissions associated with those roles.
+    // Since we want admin to have all, and simplify for now:
+    return (await this.findAllPermissions()).map(p => p.code);
   }
 
   async findAllPermissions(): Promise<PermissionResponseDto[]> {
