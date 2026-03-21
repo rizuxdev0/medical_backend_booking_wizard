@@ -77,6 +77,12 @@ export class PatientsController {
     return this.patientsService.update(id, updatePatientDto);
   }
 
+  @Get('user/:userId')
+  @ApiOperation({ summary: 'Trouver un patient par son ID utilisateur' })
+  findByUserId(@Param('userId') userId: string): Promise<PatientResponseDto | null> {
+    return this.patientsService.findByUserId(userId);
+  }
+
   @Delete(':id')
   @Roles('admin')
   @ApiOperation({ summary: 'Supprimer un patient' })

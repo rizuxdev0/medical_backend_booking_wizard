@@ -24,6 +24,9 @@ import { DocumentsModule } from './modules/documents/documents.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { InvitationsModule } from './modules/invitations/invitations.module';
 import { ChatModule } from './modules/chat/chat.module';
+import { BillableItemsModule } from './modules/billable-items/billable-items.module';
+import { StatisticsModule } from './modules/statistics/statistics.module';
+
 import { MailerModule } from '@nestjs-modules/mailer';
 
 @Module({
@@ -77,8 +80,11 @@ import { MailerModule } from '@nestjs-modules/mailer';
     DashboardModule,
     InvitationsModule,
     ChatModule,
+    StatisticsModule,
+    BillableItemsModule,
   ],
   controllers: [],
+
   providers: [],
 })
 export class AppModule {}

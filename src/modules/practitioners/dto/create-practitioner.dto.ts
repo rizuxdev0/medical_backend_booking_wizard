@@ -127,4 +127,9 @@ export class CreatePractitionerDto {
   @IsOptional()
   @IsString()
   postal_code?: string;
+
+  @ApiProperty({ example: true, required: false })
+  @IsOptional()
+  @IsBoolean()
+  is_active?: boolean;
 }

@@ -23,18 +23,11 @@ export class RolePermission {
   id: string;
 
   @Column({
-    type: 'enum',
-    enum: [
-      'admin',
-      'doctor',
-      'secretary',
-      'patient',
-      'nurse',
-      'accountant',
-      'supervisor',
-    ],
+    type: 'varchar',
+    length: 50,
   })
   role: AppRole;
+
 
   @Column({ name: 'permission_code' })
   permissionCode: string;

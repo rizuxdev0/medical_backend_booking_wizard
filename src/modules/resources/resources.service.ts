@@ -560,8 +560,9 @@ export class ResourcesService {
       warranty_expiry_date: resource.warrantyExpiryDate || null,
       last_maintenance_date: resource.lastMaintenanceDate || null,
       next_maintenance_date: resource.nextMaintenanceDate || null,
-      cost_per_hour: resource.costPerHour,
+      cost_per_hour: Number(resource.costPerHour) || 0,
       contact_person: resource.contactPerson || null,
+
       contact_phone: resource.contactPhone || null,
       image_url: resource.imageUrl || null,
       notes: resource.notes || null,

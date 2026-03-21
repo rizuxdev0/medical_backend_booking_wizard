@@ -15,6 +15,7 @@ import { SettingDto, SettingResponseDto } from './dto/setting.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import * as nodemailer from 'nodemailer';
 
 @ApiTags('settings')
 @ApiBearerAuth()
@@ -27,7 +28,7 @@ export class SettingsController {
   ) {}
 
   @Get()
-  @Roles('admin', 'doctor', 'secretary')
+  @Roles('admin', 'doctor', 'secretary', 'patient', 'nurse', 'accountant', 'supervisor')
   @ApiOperation({ summary: 'Récupérer tous les paramètres' })
   findAll(): Promise<SettingResponseDto[]> {
     return this.settingsService.findAll();
@@ -44,20 +45,42 @@ export class SettingsController {
   @Roles('admin')
   @ApiOperation({ summary: 'Envoyer un email de test' })
   async testEmail(@Body() body: { to: string }): Promise<{ message: string }> {
-    await this.mailerService.sendMail({
-      to: body.to,
-      subject: 'Email De Test - MedAgenda',
-      html: `
-        <div style="font-family: sans-serif; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
-          <h2 style="color: #0070f3; text-align: center;">Test de configuration SMTP</h2>
-          <p>Ceci est un email de test envoyé depuis votre application <strong>MedAgenda</strong>.</p>
-          <p>Si vous recevez cet email, c'est que votre configuration SMTP est correcte !</p>
-          <hr />
-          <p style="font-size: 12px; color: #666; text-align: center;">Envoyé le ${new Date().toLocaleString('fr-FR')}</p>
-        </div>
-      `,
-    });
-    return { message: 'Email de test envoyé avec succès' };
+    // 1. Récupérer la dernière config SMTP
+    try {
+      const emailConfig = await this.settingsService.findOne('email_config');
+      const { smtp_host, smtp_port, smtp_user, smtp_pass, from_name, from_email } = emailConfig.value as any;
+
+      // 2. Créer un transporter temporaire avec ces réglages
+      const transporter = nodemailer.createTransport({
+        host: smtp_host,
+        port: smtp_port,
+        secure: smtp_port === 465,
+        auth: {
+          user: smtp_user,
+          pass: smtp_pass,
+        },
+      });
+
+      // 3. Envoyer
+      await transporter.sendMail({
+        to: body.to,
+        from: `"${from_name}" <${from_email}>`,
+        subject: 'Email De Test - MedAgenda',
+        html: `
+          <div style="font-family: sans-serif; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
+            <h2 style="color: #0ea5e9; text-align: center;">Test de configuration SMTP</h2>
+            <p>Ceci est un email de test envoyé depuis votre application <strong>MedAgenda</strong>.</p>
+            <p>Si vous recevez cet email, c'est que votre configuration SMTP enregistrée en base de données est correcte !</p>
+            <hr />
+            <p style="font-size: 11px; color: #999; text-align: center;">Configuration testée : ${smtp_host}:${smtp_port} (${smtp_user})</p>
+          </div>
+        `,
+      });
+      return { message: 'Email de test envoyé avec succès' };
+    } catch (error) {
+      console.error('SMTP Test Failed:', error);
+      throw new Error(`Échec du test SMTP : ${error.message}`);
+    }
   }
 
   @Put(':key')

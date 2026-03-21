@@ -88,8 +88,13 @@ export class AppointmentsService {
 
     const appointments = await this.appointmentRepo.find({
       where: whereCondition,
-      order: { scheduledAt: 'DESC' },
-      relations: ['patient', 'practitioner', 'practitioner.profile', 'appointmentType', 'resource'],
+      order: { scheduledAt: 'DESC' } as any,
+      relations: {
+        patient: true,
+        practitioner: { profile: true },
+        appointmentType: true,
+        resource: true
+      },
     });
 
     return appointments.map((apt) => this.mapToResponse(apt));
@@ -114,13 +119,13 @@ export class AppointmentsService {
   async findOne(id: string): Promise<AppointmentResponseDto> {
     const appointment = await this.appointmentRepo.findOne({
       where: { id },
-      relations: [
-        'patient',
-        'practitioner',
-        'appointmentType',
-        'resource',
-        'creator',
-      ],
+      relations: {
+        patient: true,
+        practitioner: { profile: true },
+        appointmentType: true,
+        resource: true,
+        creator: true,
+      },
     });
 
     if (!appointment) {
@@ -617,8 +622,8 @@ export class AppointmentsService {
               last_name: appointment.practitioner.profile.last_name,
             }
           : {
-              first_name: appointment.practitioner.firstName,
-              last_name: appointment.practitioner.lastName,
+              first_name: appointment.practitioner.firstName || '',
+              last_name: appointment.practitioner.lastName || '',
             },
       };
     }

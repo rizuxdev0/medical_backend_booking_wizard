@@ -266,7 +266,7 @@ export class GuardsService {
   ) {}
 
   async findAll(query: GuardQueryDto): Promise<GuardResponseDto[]> {
-    const { practitioner_id, month, from_date, to_date } = query;
+    const { practitioner_id, month, from_date, to_date, start, end } = query;
 
     const whereCondition: any = {};
 
@@ -274,9 +274,13 @@ export class GuardsService {
       whereCondition.practitionerId = practitioner_id;
     }
 
-    if (from_date && to_date) {
-      whereCondition.guardDate = Between(from_date, to_date);
+    const from = from_date || start;
+    const to = to_date || end;
+
+    if (from && to) {
+      whereCondition.guardDate = Between(from, to);
     } else if (month) {
+
       const [year, monthNum] = month.split('-');
       const startDate = `${year}-${monthNum}-01`;
       const endDate = new Date(parseInt(year), parseInt(monthNum), 0)

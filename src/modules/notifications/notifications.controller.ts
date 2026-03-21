@@ -13,6 +13,7 @@ import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { NotificationsService } from './notifications.service';
 import {
   CreateNotificationDto,
+  CreateNotificationLogDto,
   NotificationQueryDto,
 } from './dto/create-notification.dto';
 import {
@@ -34,9 +35,17 @@ export class NotificationsController {
   // ==================== NOTIFICATIONS PLANIFIÉES ====================
 
   @Post()
+  @ApiOperation({ summary: 'Créer un log de notification (Interne/UI)' })
+  createLog(
+    @Body() createLogDto: CreateNotificationLogDto,
+  ): Promise<NotificationLogResponseDto> {
+    return this.notificationsService.createLog(createLogDto);
+  }
+
+  @Post('scheduled')
   @Roles('admin', 'doctor', 'secretary')
   @ApiOperation({ summary: 'Créer une notification planifiée' })
-  create(
+  createScheduled(
     @Body() createNotificationDto: CreateNotificationDto,
   ): Promise<NotificationResponseDto> {
     return this.notificationsService.create(createNotificationDto);

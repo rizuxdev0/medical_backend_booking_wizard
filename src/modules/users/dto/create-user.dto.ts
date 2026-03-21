@@ -5,6 +5,7 @@ import {
   IsOptional,
   IsArray,
   IsEnum,
+  IsBoolean,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -47,6 +48,16 @@ export class CreateUserDto {
   @IsOptional()
   @IsString()
   employee_id?: string;
+
+  @ApiProperty({ example: 'Note sur l\'utilisateur', required: false })
+  @IsOptional()
+  @IsString()
+  notes?: string;
+
+  @ApiProperty({ example: true, required: false })
+  @IsOptional()
+  @IsBoolean()
+  is_active?: boolean;
 
   @ApiProperty({
     example: ['admin', 'doctor'],

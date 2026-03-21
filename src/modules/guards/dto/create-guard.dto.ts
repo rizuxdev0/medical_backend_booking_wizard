@@ -63,7 +63,20 @@ export class GuardQueryDto {
   @IsOptional()
   @IsDateString()
   to_date?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  start?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  end?: string;
 }
+
+
+
 
 export class GuardResponseDto {
   id: string;

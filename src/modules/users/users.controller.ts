@@ -19,6 +19,7 @@ import { PaginationDto } from '../../common/dto/pagination.dto';
 import { UserResponseDto } from './dto/user-response.dto';
 import { RoleResponseDto } from './dto/role-response.dto';
 import { CreateUserDto } from './dto/create-user.dto';
+import { UserQueryDto } from './dto/user-query.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { AddRoleDto } from './dto/add-role.dto';
 
@@ -26,8 +27,8 @@ import { AddRoleDto } from './dto/add-role.dto';
 @ApiBearerAuth()
 @Controller('users')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('admin')
 export class UsersController {
+
   constructor(
     private readonly usersService: UsersService,
     private readonly permissionsService: PermissionsService,
@@ -40,27 +41,35 @@ export class UsersController {
   }
 
   @Get()
+  @Roles('admin')
   @ApiOperation({ summary: 'Liste tous les utilisateurs (admin uniquement)' })
+
   findAll(
-    @Query() query: PaginationDto,
+    @Query() query: UserQueryDto,
   ): Promise<{ data: UserResponseDto[]; meta: any }> {
     return this.usersService.findAll(query);
   }
 
   @Get(':id')
+  @Roles('admin')
   @ApiOperation({ summary: "Détail d'un utilisateur (admin uniquement)" })
+
   findOne(@Param('id') id: string): Promise<UserResponseDto> {
     return this.usersService.findOne(id);
   }
 
   @Post()
+  @Roles('admin')
   @ApiOperation({ summary: 'Créer un utilisateur (admin uniquement)' })
+
   create(@Body() createUserDto: CreateUserDto): Promise<UserResponseDto> {
     return this.usersService.create(createUserDto);
   }
 
   @Patch(':id')
+  @Roles('admin')
   @ApiOperation({ summary: 'Modifier un utilisateur (admin uniquement)' })
+
   update(
     @Param('id') id: string,
     @Body() updateUserDto: UpdateUserDto,
@@ -88,5 +97,17 @@ export class UsersController {
     @Param('role') role: string,
   ): Promise<{ message: string }> {
     return this.usersService.removeRole(id, role);
+  }
+
+  @Patch(':id/deactivate')
+  @ApiOperation({ summary: 'Désactiver un utilisateur (admin uniquement)' })
+  deactivate(@Param('id') id: string): Promise<UserResponseDto> {
+    return this.usersService.deactivate(id);
+  }
+
+  @Delete(':id')
+  @ApiOperation({ summary: 'Supprimer définitivement un utilisateur (admin uniquement)' })
+  remove(@Param('id') id: string): Promise<{ message: string }> {
+    return this.usersService.remove(id);
   }
 }

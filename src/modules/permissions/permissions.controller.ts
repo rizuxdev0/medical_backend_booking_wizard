@@ -73,6 +73,8 @@ import {
   Body,
   Param,
   Put,
+  Req,
+  ForbiddenException,
   UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
@@ -154,5 +156,47 @@ export class PermissionsController {
     @Body() createPermissionDto: CreatePermissionDto,
   ): Promise<PermissionResponseDto> {
     return this.permissionsService.createPermission(createPermissionDto);
+  }
+
+  // --- Direct User Permissions (Extra Permissions) ---
+
+  @Get('user/:userId')
+  @Roles('admin')
+  @ApiOperation({ summary: 'Liste les permissions directes d\'un utilisateur' })
+  getUserDirectPermissions(@Param('userId') userId: string) {
+    return this.permissionsService.getUserDirectPermissions(userId);
+  }
+
+  @Post('user/:userId')
+  @Roles('admin')
+  @ApiOperation({ summary: 'Assigner une permission directe (Grant/Deny) à un utilisateur' })
+  assignUserPermission(
+    @Param('userId') userId: string,
+    @Body() data: { permissionCode: string; is_granted: boolean }
+  ) {
+    return this.permissionsService.assignUserPermission(userId, data.permissionCode, data.is_granted);
+  }
+
+  @Put('user/:userId/remove/:permissionCode')
+  @Roles('admin')
+  @ApiOperation({ summary: 'Retirer une permission directe d\'un utilisateur' })
+  removeUserPermission(
+    @Param('userId') userId: string,
+    @Param('permissionCode') permissionCode: string
+  ) {
+    return this.permissionsService.removeUserPermission(userId, permissionCode);
+  }
+
+  @Get('user/:userId/consolidated')
+  @ApiOperation({ summary: 'Récupérer les permissions consolidées (Rôles + Directes) d\'un utilisateur' })
+  async getConsolidatedPermissions(@Param('userId') userId: string, @Req() req: any) {
+    const user = req.user;
+    const isAdmin = user.roles && user.roles.includes('admin');
+    
+    if (!isAdmin && user.id !== userId) {
+      throw new ForbiddenException('Vous ne pouvez consulter que vos propres permissions');
+    }
+    
+    return this.permissionsService.getConsolidatedUserPermissions(userId);
   }
 }

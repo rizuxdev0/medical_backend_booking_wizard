@@ -567,6 +567,23 @@ CREATE TABLE chat_messages (
 );
 
 -- =============================================
+-- TABLE 25: user_invitations
+-- =============================================
+CREATE TABLE user_invitations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+    email VARCHAR(255) NOT NULL,
+    otp_code VARCHAR(10) NOT NULL,
+    temp_password VARCHAR(255) NOT NULL,
+    expires_at TIMESTAMPTZ NOT NULL,
+    used BOOLEAN DEFAULT false,
+    created_by UUID REFERENCES profiles(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_user_invitations_email_otp ON user_invitations(email, otp_code);
+
+-- =============================================
 -- DONNÉES INITIALES
 -- =============================================
 

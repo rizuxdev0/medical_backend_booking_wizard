@@ -45,11 +45,12 @@ export class Appointment {
   durationMinutes: number;
 
   @Column({
-    type: 'enum',
-    enum: ['pending', 'confirmed', 'completed', 'cancelled', 'no_show'],
+    type: 'varchar',
+    length: 50,
     default: 'pending',
   })
   status: AppointmentStatus;
+
 
   @Column({ type: 'text', nullable: true })
   notes: string;

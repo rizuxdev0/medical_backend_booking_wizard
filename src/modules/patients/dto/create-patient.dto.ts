@@ -119,4 +119,8 @@ export class CreatePatientDto {
   @IsOptional()
   @IsString()
   notes?: string;
+  @ApiProperty({ example: 'uuid-of-user', required: false })
+  @IsOptional()
+  @IsString()
+  user_id?: string;
 }

@@ -12,10 +12,11 @@ export class ActivityLogResponseDto {
   user_agent: string | null;
   created_at: Date;
 
-  user?: {
+  profile?: {
     id: string;
     email: string;
     first_name: string | null;
     last_name: string | null;
   };
 }
+

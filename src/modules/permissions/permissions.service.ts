@@ -151,9 +151,11 @@ import {
   OnModuleInit,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { Permission } from './entities/permission.entity';
 import { RolePermission } from './entities/role-permission.entity';
+import { UserPermission } from './entities/user-permission.entity';
+import { UserRole, AppRole } from '../users/entities/user-role.entity';
 import {
   CreatePermissionDto,
   AssignPermissionsDto,
@@ -168,114 +170,187 @@ export class PermissionsService implements OnModuleInit {
     private permissionRepo: Repository<Permission>,
     @InjectRepository(RolePermission)
     private rolePermissionRepo: Repository<RolePermission>,
+    @InjectRepository(UserPermission)
+    private userPermissionRepo: Repository<UserPermission>,
+    @InjectRepository(UserRole)
+    private userRoleRepo: Repository<UserRole>,
   ) {}
 
   async onModuleInit() {
-    const count = await this.permissionRepo.count();
-    if (count === 0) {
-      console.log('--- SEEDING PERMISSIONS ---');
-      await this.seedDefaultPermissions();
-    }
+    console.log('--- SYNCING PERMISSIONS ---');
+    await this.seedDefaultPermissions();
   }
 
   private async seedDefaultPermissions() {
     const defaultPermissions = [
-      // Patients
-      { code: 'patients.view', name: 'Voir patients', module: 'patients' },
-      { code: 'patients.create', name: 'Créer patient', module: 'patients' },
-      { code: 'patients.edit', name: 'Modifier patient', module: 'patients' },
-      { code: 'patients.delete', name: 'Supprimer patient', module: 'patients' },
-      { code: 'patients.documents', name: 'Gérer les documents patients', module: 'patients' },
-      // Appointments
-      { code: 'appointments.view', name: 'Voir RDV', module: 'appointments' },
-      { code: 'appointments.create', name: 'Créer RDV', module: 'appointments' },
-      { code: 'appointments.edit', name: 'Modifier RDV', module: 'appointments' },
-      { code: 'appointments.delete', name: 'Annuler RDV', module: 'appointments' },
+      // Patients (Staff view)
+      { code: 'patients.view', name: 'Voir dossiers patients', module: 'patients' },
+      { code: 'patients.create', name: 'Créer dossier patient', module: 'patients' },
+      { code: 'patients.edit', name: 'Modifier dossier patient', module: 'patients' },
+      { code: 'patients.delete', name: 'Supprimer dossier patient', module: 'patients' },
+      { code: 'patients.documents', name: 'Gérer documents dossiers', module: 'patients' },
+
+      // Portal Patient (Actions a patient can do for themselves)
+      { code: 'patient.dashboard.view', name: 'Voir mon tableau de bord', module: 'patient_portal' },
+      { code: 'patient.appointments.view', name: 'Voir mes rendez-vous', module: 'patient_portal' },
+      { code: 'patient.appointments.create', name: 'Prendre un rendez-vous', module: 'patient_portal' },
+      { code: 'patient.consultations.view', name: 'Voir mes comptes-rendus', module: 'patient_portal' },
+      { code: 'patient.documents.view', name: 'Voir mes documents médicaux', module: 'patient_portal' },
+      { code: 'patient.billing.view', name: 'Voir mes factures', module: 'patient_portal' },
+      { code: 'patient.profile.view', name: 'Voir mes informations personnelles', module: 'patient_portal' },
+      { code: 'patient.profile.edit', name: 'Modifier mon profil', module: 'patient_portal' },
+      { code: 'patient.practitioners.view', name: 'Voir mes praticiens habituels', module: 'patient_portal' },
+
+      // Appointments (Staff)
+      { code: 'appointments.view', name: 'Voir planning clinique', module: 'appointments' },
+      { code: 'appointments.create', name: 'Créer RDV clinique', module: 'appointments' },
+      { code: 'appointments.edit', name: 'Modifier RDV clinique', module: 'appointments' },
+      { code: 'appointments.delete', name: 'Annuler RDV clinique', module: 'appointments' },
       { code: 'appointments.close', name: 'Clôturer RDV', module: 'appointments' },
-      // Practitioners
+
+      // Practitioners (Staff)
       { code: 'practitioners.view', name: 'Voir praticiens', module: 'practitioners' },
       { code: 'practitioners.create', name: 'Créer praticien', module: 'practitioners' },
       { code: 'practitioners.edit', name: 'Modifier praticien', module: 'practitioners' },
       { code: 'practitioners.delete', name: 'Supprimer praticien', module: 'practitioners' },
-      // Queue
-      { code: 'queue.view', name: 'Voir file', module: 'queue' },
-      { code: 'queue.manage', name: 'Gérer file', module: 'queue' },
-      // Billing
-      { code: 'billing.view', name: 'Voir factures', module: 'billing' },
-      { code: 'billing.create', name: 'Créer facture', module: 'billing' },
+
+      // Queue (Staff)
+      { code: 'queue.view', name: 'Voir file d\'attente', module: 'queue' },
+      { code: 'queue.manage', name: 'Gérer file d\'attente', module: 'queue' },
+
+      // Billing (Staff)
+      { code: 'billing.view', name: 'Voir facturation clinique', module: 'billing' },
+      { code: 'billing.create', name: 'Générer facture', module: 'billing' },
       { code: 'billing.edit', name: 'Modifier facture', module: 'billing' },
       { code: 'billing.delete', name: 'Supprimer facture', module: 'billing' },
-      // Payments
-      { code: 'payments.view', name: 'Voir paiements', module: 'billing' },
-      { code: 'payments.create', name: 'Enregistrer paiement', module: 'billing' },
-      // Settings
-      { code: 'settings.view', name: 'Voir paramètres', module: 'settings' },
-      { code: 'settings.edit', name: 'Modifier paramètres', module: 'settings' },
-      // Users
-      { code: 'users.view', name: 'Voir utilisateurs', module: 'users' },
-      { code: 'users.create', name: 'Créer un nouvel utilisateur', module: 'users' },
-      { code: 'users.edit', name: 'Modifier utilisateur', module: 'users' },
-      { code: 'users.deactivate', name: 'Désactiver un compte utilisateur', module: 'users' },
-      { code: 'users.manage_roles', name: 'Gérer les rôles', module: 'users' },
-      // Reports
-      { code: 'reports.view', name: 'Voir statistiques', module: 'reports' },
-      { code: 'reports.export', name: 'Exporter données', module: 'reports' },
-      // Audit
-      { code: 'audit.view', name: 'Voir audit', module: 'audit' },
-      { code: 'audit.export', name: 'Exporter audit', module: 'audit' },
-      // Resources
-      { code: 'resources.view', name: 'Voir ressources', module: 'resources' },
-      { code: 'resources.manage', name: 'Gérer ressources', module: 'resources' },
-      // Departments
-      { code: 'departments.view', name: 'Voir départements', module: 'departments' },
-      { code: 'departments.create', name: 'Créer nouveau département', module: 'departments' },
-      { code: 'departments.edit', name: 'Modifier département existant', module: 'departments' },
-      { code: 'departments.delete', name: 'Supprimer département', module: 'departments' },
-      // Checkout
-      { code: 'checkout.view', name: 'Voir caisse', module: 'checkout' },
-      { code: 'checkout.manage', name: 'Gérer sorties', module: 'checkout' },
-      // Chat
-      { code: 'chat.view', name: 'Voir messagerie', module: 'chat' },
-      { code: 'chat.send', name: 'Envoyer messages', module: 'chat' },
-      // Guards
-      { code: 'guards.view', name: 'Voir gardes', module: 'guards' },
-      { code: 'guards.manage', name: 'Gérer gardes', module: 'guards' },
-      // Absences
-      { code: 'absences.view', name: 'Voir absences', module: 'absences' },
-      { code: 'absences.manage', name: 'Gérer absences', module: 'absences' },
-      // Currencies
-      { code: 'currencies.view', name: 'Voir devises', module: 'currencies' },
-      { code: 'currencies.manage', name: 'Gérer devises', module: 'currencies' },
-      // Notifications
-      { code: 'notifications.view', name: 'Voir notifications', module: 'notifications' },
-      { code: 'notifications.manage', name: 'Gérer notifications', module: 'notifications' },
+      { code: 'payments.view', name: 'Voir flux paiements', module: 'billing' },
+      { code: 'payments.create', name: 'Enregistrer un paiement', module: 'billing' },
+
+      // Settings & Setup
+      { code: 'settings.view', name: 'Voir paramètres globaux', module: 'settings' },
+      { code: 'settings.edit', name: 'Gérer configuration système', module: 'settings' },
+      { code: 'users.view', name: 'Gérer utilisateurs & accès', module: 'users' },
+      { code: 'users.manage_roles', name: 'Modifier rôles et permissions', module: 'users' },
+
+      // Reports & Tools
+      { code: 'reports.view', name: 'Voir statistiques d\'activité', module: 'reports' },
+      { code: 'audit.view', name: 'Consulter logs d\'audit', module: 'audit' },
+      { code: 'resources.manage', name: 'Gérer ressources matérielles', module: 'resources' },
+      { code: 'checkout.manage', name: 'Gérer la caisse physique', module: 'checkout' },
+      { code: 'chat.view', name: 'Utiliser la messagerie interne', module: 'chat' },
     ];
 
     for (const p of defaultPermissions) {
-      const perm = this.permissionRepo.create(p);
-      await this.permissionRepo.save(perm);
+      const existing = await this.permissionRepo.findOne({ where: { code: p.code } });
+      if (!existing) {
+        await this.permissionRepo.save(this.permissionRepo.create(p));
+      }
     }
 
-    // Seed role-permissions for common roles
-    const roles = ['admin', 'doctor', 'secretary', 'nurse', 'accountant', 'supervisor'];
-    for (const role of roles) {
-      if (role === 'admin') {
-        // Admin gets all automatically via hasPermission, but we can seed for visibility
-        for (const p of defaultPermissions) {
-           await this.rolePermissionRepo.save(this.rolePermissionRepo.create({
-             role: role as any,
-             permissionCode: p.code
-           }));
+    // Role -> Permissions Mapping
+    const rolePermissions: Record<AppRole, string[]> = {
+      admin: defaultPermissions.map(p => p.code),
+      patient: [
+        'patient.dashboard.view',
+        'patient.appointments.view',
+        'patient.appointments.create',
+        'patient.consultations.view',
+        'patient.documents.view',
+        'patient.billing.view',
+        'patient.profile.view',
+        'patient.profile.edit',
+        'patient.practitioners.view',
+      ],
+      doctor: [
+        'patients.view', 'patients.edit', 'patients.documents',
+        'appointments.view', 'appointments.create', 'appointments.edit', 'appointments.close',
+        'practitioners.view', 'queue.view', 'queue.manage',
+        'billing.view', 'chat.view', 'reports.view'
+      ],
+      secretary: [
+        'patients.view', 'patients.create', 'patients.edit', 'patients.documents',
+        'appointments.view', 'appointments.create', 'appointments.edit', 'appointments.delete',
+        'practitioners.view', 'queue.view', 'queue.manage',
+        'billing.view', 'billing.create', 'payments.create', 'checkout.manage',
+        'chat.view'
+      ],
+      nurse: [
+        'patients.view', 'patients.documents', 'appointments.view', 'queue.view', 'chat.view'
+      ],
+      accountant: [
+        'billing.view', 'billing.create', 'billing.edit', 'payments.view', 'payments.create', 'reports.view'
+      ],
+      supervisor: [
+        'patients.view', 'appointments.view', 'practitioners.view', 'billing.view', 'reports.view', 'audit.view'
+      ]
+    };
+
+    for (const [role, codes] of Object.entries(rolePermissions)) {
+      for (const code of codes) {
+        const existing = await this.rolePermissionRepo.findOne({ 
+          where: { role: role as any, permissionCode: code } 
+        });
+        if (!existing) {
+          await this.rolePermissionRepo.save(this.rolePermissionRepo.create({
+            role: role as any,
+            permissionCode: code
+          }));
         }
       }
     }
   }
 
   async getConsolidatedUserPermissions(userId: string): Promise<string[]> {
-    // This is a placeholder. In a real system, you'd fetch roles for userId 
-    // then fetch all permissions associated with those roles.
-    // Since we want admin to have all, and simplify for now:
-    return (await this.findAllPermissions()).map(p => p.code);
+    // 1. Get user roles
+    const userRoles = await this.userRoleRepo.find({ where: { user_id: userId } });
+    const roles = userRoles.map(ur => ur.role);
+
+    if (roles.includes('admin')) {
+      return (await this.findAllPermissions()).map(p => p.code);
+    }
+
+    // 2. Get permissions from roles
+    const rolePerms = await this.rolePermissionRepo.find({
+      where: { role: In(roles as any[]) }
+    });
+    const consolidated = new Set<string>(rolePerms.map(rp => rp.permissionCode));
+
+    // 3. Apply direct user overrides (Extra Permissions)
+    const directPerms = await this.userPermissionRepo.find({ where: { userId } });
+    for (const dp of directPerms) {
+      if (dp.is_granted) {
+        consolidated.add(dp.permissionCode);
+      } else {
+        consolidated.delete(dp.permissionCode);
+      }
+    }
+
+    return Array.from(consolidated);
+  }
+
+  async getUserDirectPermissions(userId: string): Promise<UserPermission[]> {
+    return this.userPermissionRepo.find({
+      where: { userId },
+      relations: ['permission'],
+    });
+  }
+
+  async assignUserPermission(userId: string, permissionCode: string, is_granted: boolean): Promise<UserPermission> {
+    const permission = await this.permissionRepo.findOne({ where: { code: permissionCode } });
+    if (!permission) throw new NotFoundException(`Permission ${permissionCode} non trouvée`);
+
+    let userPerm = await this.userPermissionRepo.findOne({ where: { userId, permissionCode } });
+    if (userPerm) {
+      userPerm.is_granted = is_granted;
+    } else {
+      userPerm = this.userPermissionRepo.create({ userId, permissionCode, is_granted });
+    }
+
+    return this.userPermissionRepo.save(userPerm);
+  }
+
+  async removeUserPermission(userId: string, permissionCode: string): Promise<void> {
+    await this.userPermissionRepo.delete({ userId, permissionCode });
   }
 
   async findAllPermissions(): Promise<PermissionResponseDto[]> {

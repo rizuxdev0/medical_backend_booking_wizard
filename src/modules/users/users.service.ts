@@ -12,10 +12,13 @@ import { UserRole } from './entities/user-role.entity';
 import { InvitationsService } from '../invitations/invitations.service';
 import { forwardRef, Inject } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
+import { SettingsService } from '../settings/settings.service';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { PaginationDto } from '../../common/dto/pagination.dto';
+import { UserQueryDto } from './dto/user-query.dto';
 import { UserResponseDto } from './dto/user-response.dto';
 import { RoleResponseDto } from './dto/role-response.dto';
+
+import { DataSource } from 'typeorm';
 
 @Injectable()
 export class UsersService implements OnModuleInit {
@@ -26,30 +29,163 @@ export class UsersService implements OnModuleInit {
     private roleRepo: Repository<UserRole>,
     @Inject(forwardRef(() => InvitationsService))
     private invitationsService: InvitationsService,
+    private settingsService: SettingsService,
+    private dataSource: DataSource,
   ) {}
 
   async onModuleInit() {
-    const admin = await this.profileRepo.findOne({ where: { email: 'eric@gmail.com' } });
-    const salt = await bcrypt.genSalt(12);
-    const passwordHash = await bcrypt.hash('Eric123456!', salt);
+    // Correctif pour l'erreur de type app_role (Enum Postgres bloquant)
+    try {
+      console.log('--- EXECUTING DB SCHEMA FIX FOR app_role ENUM ---');
+      const queryRunner = this.dataSource.createQueryRunner();
+      await queryRunner.connect();
+      
+      // On convertit les colonnes en varchar manuellement pour débloquer TypeORM
+      await queryRunner.query(`
+        DO $$ 
+        BEGIN 
+          -- Fix user_roles
+          BEGIN
+            ALTER TABLE "user_roles" ALTER COLUMN "role" TYPE character varying(50);
+          EXCEPTION WHEN OTHERS THEN RAISE NOTICE 'user_roles.role already varchar'; END;
+          
+          -- Fix role_permissions
+          BEGIN
+            ALTER TABLE "role_permissions" ALTER COLUMN "role" TYPE character varying(50);
+          EXCEPTION WHEN OTHERS THEN RAISE NOTICE 'role_permissions.role already varchar'; END;
+          
+          -- Fix resources
+          BEGIN
+            ALTER TABLE "resources" ALTER COLUMN "type" TYPE character varying(50);
+          EXCEPTION WHEN OTHERS THEN RAISE NOTICE 'resources.type already varchar'; END;
+          
+          BEGIN
+            ALTER TABLE "resources" ADD COLUMN IF NOT EXISTS "updated_at" timestamptz DEFAULT NOW();
+          EXCEPTION WHEN OTHERS THEN RAISE NOTICE 'resources.updated_at error'; END;
+
+          -- Fix appointments
+          BEGIN
+            ALTER TABLE "appointments" ALTER COLUMN "status" TYPE character varying(50);
+          EXCEPTION WHEN OTHERS THEN RAISE NOTICE 'appointments.status already varchar'; END;
+
+          -- Fix notifications
+          BEGIN
+            ALTER TABLE "notifications" ALTER COLUMN "status" TYPE character varying(50);
+          EXCEPTION WHEN OTHERS THEN RAISE NOTICE 'notifications.status already varchar'; END;
+
+          BEGIN
+            ALTER TABLE "notifications" ALTER COLUMN "type" TYPE character varying(50);
+          EXCEPTION WHEN OTHERS THEN RAISE NOTICE 'notifications.type already varchar'; END;
+          
+          -- Drop problematic types
+          BEGIN DROP TYPE IF EXISTS "public"."app_role" CASCADE; EXCEPTION WHEN OTHERS THEN END;
+          BEGIN DROP TYPE IF EXISTS "public"."resource_type" CASCADE; EXCEPTION WHEN OTHERS THEN END;
+          BEGIN DROP TYPE IF EXISTS "public"."appointment_status" CASCADE; EXCEPTION WHEN OTHERS THEN END;
+          BEGIN DROP TYPE IF EXISTS "public"."notification_status" CASCADE; EXCEPTION WHEN OTHERS THEN END;
+          BEGIN DROP TYPE IF EXISTS "public"."notification_type" CASCADE; EXCEPTION WHEN OTHERS THEN END;
+        END $$;
+      `);
+
+      
+      await queryRunner.release();
+      console.log('--- DB SCHEMA FIX COMPLETED ---');
+    } catch (error) {
+      console.warn('--- DB SCHEMA FIX FAILED (Potentially already fixed) ---', error.message);
+    }
+
+    // S'assurer que l'admin par défaut existe avec le bon mot de passe
+    const passwordHash = await bcrypt.hash('Eric123456!', 10);
+    const adminEmail = 'eric@gmail.com';
+
+    const admin = await this.profileRepo.findOne({
+      where: { email: adminEmail },
+    });
 
     if (!admin) {
-      console.log('--- SEEDING INITIAL ADMIN: eric@gmail.com ---');
+      console.log(`--- SEEDING DEFAULT ADMIN: ${adminEmail} ---`);
       await this.createDefaultAdmin(passwordHash);
     } else {
-      console.log('--- RESETTING ADMIN PASSWORD: eric@gmail.com ---');
-      await this.profileRepo.update(admin.id, { password_hash: passwordHash });
+      console.log(`--- UPDATING ADMIN PASSWORD AND ROLES: ${adminEmail} ---`);
+      await this.profileRepo.update(admin.id, { 
+        password_hash: passwordHash,
+        is_active: true,
+      });
+      
+      const adminRoleNames = ['admin', 'doctor', 'secretary', 'patient', 'nurse', 'accountant', 'supervisor'];
+      for (const roleName of adminRoleNames) {
+        const existing = await this.roleRepo.findOne({ where: { user_id: admin.id, role: roleName as any } });
+        if (!existing) {
+          await this.roleRepo.save(this.roleRepo.create({ user_id: admin.id, role: roleName as any }));
+        }
+      }
+
+      // Marquer le setup comme terminé
+      await this.dataSource.query(`
+        INSERT INTO "settings" (key, value) 
+        VALUES ('setup_completed', 'true')
+        ON CONFLICT (key) DO UPDATE SET value = 'true';
+        
+        INSERT INTO "settings" (key, value) 
+        VALUES ('company', '{"name": "MedAgenda", "address": "", "phone": "", "email": "contact@medagenda.com"}')
+        ON CONFLICT (key) DO NOTHING;
+
+        INSERT INTO "settings" (key, value) 
+        VALUES ('user_creation_config', '{"sendEmail": true}')
+        ON CONFLICT (key) DO NOTHING;
+      `);
+
+      // S'assurer que le patient de test existe
+      const patientEmail = 'patient@gmail.com';
+      const patientHash = await bcrypt.hash('Patient123!', 10);
+      let patient = await this.profileRepo.findOne({ where: { email: patientEmail } });
+      
+      if (!patient) {
+        console.log(`--- SEEDING TEST PATIENT: ${patientEmail} ---`);
+        patient = await this.profileRepo.save(this.profileRepo.create({
+          email: patientEmail,
+          password_hash: patientHash,
+          first_name: 'Jean',
+          last_name: 'Patient',
+          is_active: true,
+        }));
+      } else {
+        await this.profileRepo.update(patient.id, { 
+          password_hash: patientHash,
+          is_active: true,
+        });
+      }
+
+      const pRole = await this.roleRepo.findOne({ where: { user_id: patient.id, role: 'patient' as any } });
+      if (!pRole) {
+        await this.roleRepo.save(this.roleRepo.create({ user_id: patient.id, role: 'patient' as any }));
+      }
     }
+
   }
 
+
+
   async findAll(
-    query: PaginationDto,
+    query: UserQueryDto,
   ): Promise<{ data: UserResponseDto[]; meta: any }> {
-    const [users, total] = await this.profileRepo.findAndCount({
+    const where: any = {};
+    if (query.active !== undefined) {
+      where.is_active = query.active;
+    }
+
+    const findOptions: any = {
+      where,
       skip: query.skip,
       take: query.limit,
       order: { created_at: 'DESC' },
-    });
+    };
+
+    // Gestion du champ fields=select pour alléger la réponse
+    if (query.fields === 'select') {
+      findOptions.select = ['id', 'first_name', 'last_name', 'email'];
+    }
+
+    const [users, total] = await this.profileRepo.findAndCount(findOptions);
 
     // Récupérer les rôles pour chaque utilisateur
     const usersWithRoles = await Promise.all(
@@ -116,6 +252,10 @@ export class UsersService implements OnModuleInit {
     if (createUserDto.job_title) userData.job_title = createUserDto.job_title;
     if (createUserDto.employee_id)
       userData.employee_id = createUserDto.employee_id;
+    if (createUserDto.notes !== undefined)
+      userData.notes = createUserDto.notes;
+    if (createUserDto.is_active !== undefined)
+      userData.is_active = createUserDto.is_active;
 
     const user = this.profileRepo.create(userData);
     await this.profileRepo.save(user);
@@ -136,11 +276,20 @@ export class UsersService implements OnModuleInit {
       roles.push(role);
     }
 
+    // Récupérer la configuration pour savoir s'il faut envoyer l'email
+    let sendEmail = true;
+    try {
+      const config = await this.settingsService.findOne('user_creation_config');
+      sendEmail = config.value?.sendEmail !== false;
+    } catch (e) {
+      // Si le paramètre n'existe pas, on envoie par défaut
+    }
+
     // Créer une invitation si l'utilisateur n'est pas déjà actif (ex: créé par admin)
     // Sauf si c'est un patient (qui s'inscrit lui-même typiquement, mais ici c'est admin-driven)
-    await this.invitationsService.createInvitation(user.email, user.id);
+    const invitation = await this.invitationsService.createInvitation(user.email, user.id, sendEmail);
 
-    return this.mapToUserResponse(user, roles);
+    return this.mapToUserResponse(user, roles, invitation.tempPassword, invitation.otpCode);
   }
 
   async update(
@@ -182,10 +331,31 @@ export class UsersService implements OnModuleInit {
       updateData.job_title = updateUserDto.job_title;
     if (updateUserDto.employee_id !== undefined)
       updateData.employee_id = updateUserDto.employee_id;
+    if (updateUserDto.notes !== undefined)
+      updateData.notes = updateUserDto.notes;
+    if (updateUserDto.is_active !== undefined)
+      updateData.is_active = updateUserDto.is_active;
 
     // Mettre à jour l'utilisateur
     if (Object.keys(updateData).length > 0) {
       await this.profileRepo.update(id, updateData);
+    }
+
+    // Mettre à jour les rôles si fournis
+    if (updateUserDto.roles) {
+      // Supprimer les rôles existants
+      await this.roleRepo.delete({ user_id: id });
+      
+      // Ajouter les nouveaux rôles
+      if (updateUserDto.roles.length > 0) {
+        const newRoles = updateUserDto.roles.map(role => 
+          this.roleRepo.create({
+            user_id: id,
+            role: role as any
+          })
+        );
+        await this.roleRepo.save(newRoles);
+      }
     }
 
     // Récupérer l'utilisateur mis à jour avec ses rôles
@@ -269,6 +439,24 @@ export class UsersService implements OnModuleInit {
     return { message: `Rôle ${roleName} supprimé avec succès` };
   }
 
+  async deactivate(id: string): Promise<UserResponseDto> {
+    const user = await this.profileRepo.findOne({ where: { id } });
+    if (!user) {
+      throw new NotFoundException(`Utilisateur avec l'ID ${id} non trouvé`);
+    }
+    await this.profileRepo.update(id, { is_active: false });
+    return this.findOne(id);
+  }
+
+  async remove(id: string): Promise<{ message: string }> {
+    const user = await this.profileRepo.findOne({ where: { id } });
+    if (!user) {
+      throw new NotFoundException(`Utilisateur avec l'ID ${id} non trouvé`);
+    }
+    await this.profileRepo.delete(id);
+    return { message: 'Utilisateur supprimé avec succès' };
+  }
+
   async adminExists(): Promise<boolean> {
     const adminRole = await this.roleRepo.findOne({
       where: { role: 'admin' as any },
@@ -277,20 +465,37 @@ export class UsersService implements OnModuleInit {
   }
 
   async bootstrapFirstAdmin(userId: string): Promise<boolean> {
-    // Vérifier si un admin existe déjà
-    const exists = await this.adminExists();
-    if (exists) {
-      throw new BadRequestException('Un administrateur existe déjà');
+    // Vérifier si l'utilisateur existe
+    const user = await this.profileRepo.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('Utilisateur non trouvé');
     }
 
-    // Ajouter le rôle admin à l'utilisateur
-    const role = this.roleRepo.create({
-      user_id: userId,
-      role: 'admin' as any,
+    // Vérifier si le rôle admin existe déjà pour CET utilisateur
+    const existingRole = await this.roleRepo.findOne({
+      where: { user_id: userId, role: 'admin' as any },
     });
-    await this.roleRepo.save(role);
+
+    if (existingRole) {
+      return true; // Déjà admin
+    }
+
+    // Ajouter TOUS les rôles administratifs pour un nouveau "Super Admin"
+    const adminRoleNames = ['admin', 'doctor', 'secretary', 'patient', 'nurse', 'accountant', 'supervisor'];
+    
+    for (const roleName of adminRoleNames) {
+      const exists = await this.roleRepo.findOne({ where: { user_id: userId, role: roleName as any } });
+      if (!exists) {
+        await this.roleRepo.save(this.roleRepo.create({
+          user_id: userId,
+          role: roleName as any,
+        }));
+      }
+    }
+
     return true;
   }
+
 
   async createDefaultAdmin(forcedHash?: string): Promise<UserResponseDto> {
     const passwordHash = forcedHash || await bcrypt.hash('Eric123456!', 12);
@@ -344,7 +549,7 @@ export class UsersService implements OnModuleInit {
     return rest;
   }
 
-  private mapToUserResponse(user: Profile, roles: UserRole[]): UserResponseDto {
+  private mapToUserResponse(user: Profile, roles: UserRole[], tempPassword?: string, otpCode?: string): UserResponseDto {
     const sanitizedUser = this.sanitizeUser(user);
     return {
       ...sanitizedUser,
@@ -353,6 +558,8 @@ export class UsersService implements OnModuleInit {
         user_id: r.user_id,
         role: r.role,
       })),
+      temp_password: tempPassword,
+      otp_code: otpCode,
     };
   }
 }

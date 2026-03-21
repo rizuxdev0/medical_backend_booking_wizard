@@ -21,10 +21,11 @@ export class Resource {
   name: string;
 
   @Column({
-    type: 'enum',
-    enum: ['room', 'equipment'],
+    type: 'varchar',
+    length: 50,
   })
   type: ResourceType;
+
 
   @Column({ type: 'text', nullable: true })
   description: string;

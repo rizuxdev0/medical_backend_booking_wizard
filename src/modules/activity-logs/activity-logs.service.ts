@@ -62,33 +62,39 @@ export class ActivityLogsService {
 
   async findAll(
     query: LogQueryDto,
-  ): Promise<{ data: ActivityLogResponseDto[]; meta: any }> {
-    const {
+  ): Promise<{
+    logs: ActivityLogResponseDto[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
+    let {
       entity_type,
       entity_id,
       user_id,
       action,
       page = 1,
       limit = 50,
+      perPage,
+      start,
+      end,
     } = query;
-    const skip = (page - 1) * limit;
+
+    if (perPage) limit = perPage;
+    const effectivePage = page <= 0 ? 1 : page;
+    const skip = (effectivePage - 1) * limit;
 
     const whereCondition: any = {};
 
-    if (entity_type) {
-      whereCondition.entityType = entity_type;
-    }
+    if (entity_type) whereCondition.entityType = entity_type;
+    if (entity_id) whereCondition.entityId = entity_id;
+    if (user_id) whereCondition.userId = user_id;
+    if (action) whereCondition.action = action;
 
-    if (entity_id) {
-      whereCondition.entityId = entity_id;
-    }
-
-    if (user_id) {
-      whereCondition.userId = user_id;
-    }
-
-    if (action) {
-      whereCondition.action = action;
+    if (start && end) {
+      const { Between } = require('typeorm');
+      whereCondition.createdAt = Between(new Date(start), new Date(end));
     }
 
     const [logs, total] = await this.logRepo.findAndCount({
@@ -100,13 +106,11 @@ export class ActivityLogsService {
     });
 
     return {
-      data: logs.map((log) => this.mapToResponse(log)),
-      meta: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
-      },
+      logs: logs.map((log) => this.mapToResponse(log)),
+      total,
+      page: effectivePage,
+      limit,
+      totalPages: Math.ceil(total / limit),
     };
   }
 
@@ -140,7 +144,7 @@ export class ActivityLogsService {
     };
 
     if (log.user) {
-      response.user = {
+      response.profile = {
         id: log.user.id,
         email: log.user.email,
         first_name: log.user.first_name || null,

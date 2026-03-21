@@ -25,18 +25,11 @@ export class UserRole {
   user_id: string;
 
   @Column({
-    type: 'enum',
-    enum: [
-      'admin',
-      'doctor',
-      'secretary',
-      'patient',
-      'nurse',
-      'accountant',
-      'supervisor',
-    ],
+    type: 'varchar',
+    length: 50,
   })
   role: AppRole;
+
 
   @ManyToOne(() => Profile, (profile) => profile.roles)
   @JoinColumn({ name: 'user_id' })

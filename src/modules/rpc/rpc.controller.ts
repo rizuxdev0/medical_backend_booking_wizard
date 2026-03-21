@@ -1,7 +1,8 @@
-import { Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Req, UseGuards, Body } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { UsersService } from '../users/users.service';
 import { SettingsService } from '../settings/settings.service';
+import { RpcService } from './rpc.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 
 @ApiTags('rpc')
@@ -10,7 +11,14 @@ export class RpcController {
   constructor(
     private readonly usersService: UsersService,
     private readonly settingsService: SettingsService,
+    private readonly rpcService: RpcService,
   ) {}
+
+  @Get('status')
+  @ApiOperation({ summary: 'Vérifier le statut du système' })
+  async getStatus() {
+    return this.rpcService.getSystemStatus();
+  }
 
   @Get('admin-exists')
   @ApiOperation({ summary: 'Vérifier si un admin existe' })
@@ -22,18 +30,15 @@ export class RpcController {
   @Get('is-setup-completed')
   @ApiOperation({ summary: 'Vérifier si le setup est terminé' })
   async setupCompleted() {
-    // 1. Check if an admin user actually exists
-    const adminExists = await this.usersService.adminExists();
-    if (!adminExists) return { completed: false };
+    const completed = await this.rpcService.isSetupCompleted();
+    return { completed };
+  }
 
-    // 2. Check if setup_completed flag is set in settings
-    const setupStep = await this.settingsService.findOne('setup_completed').catch(() => null);
-    if (setupStep && setupStep.value === true) {
-      return { completed: true };
-    }
-
-    // Default to true if admin exists but setting is missing (legacy)
-    return { completed: adminExists };
+  @Post('complete-setup')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Terminer la configuration initiale' })
+  async completeSetup() {
+    return this.rpcService.completeSetup();
   }
 
   @Post('bootstrap-admin')
@@ -43,8 +48,6 @@ export class RpcController {
     if (exists) {
       return { success: false, message: 'Admin already exists' };
     }
-    
-    // Create default admin: admin@example.com / admin123
     await this.usersService.createDefaultAdmin();
     return { success: true, message: 'Admin account created' };
   }

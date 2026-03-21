@@ -23,15 +23,35 @@ export class LogQueryDto {
   @IsString()
   action?: string;
 
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  start?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  end?: string;
+
+  @ApiProperty({ required: false })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
-  @Min(1)
+  @Min(0)
   page?: number = 1;
 
+  @ApiProperty({ required: false })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
   limit?: number = 50;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  perPage?: number;
 }
+

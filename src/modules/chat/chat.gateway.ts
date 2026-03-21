@@ -19,7 +19,6 @@ import { ChatService } from './chat.service';
     credentials: true,
   },
   namespace: 'chat',
-  path: '/socket.io', // Explicit path
 })
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()

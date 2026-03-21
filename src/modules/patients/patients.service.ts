@@ -127,6 +127,7 @@ export class PatientsService {
       allergies: 'allergies',
       medical_notes: 'medicalNotes',
       notes: 'notes',
+      user_id: 'userId',
     };
 
     Object.keys(fieldMappings).forEach((snakeField) => {
@@ -204,6 +205,7 @@ export class PatientsService {
       allergies: 'allergies',
       medical_notes: 'medicalNotes',
       notes: 'notes',
+      user_id: 'userId',
     };
 
     Object.keys(fieldMappings).forEach((snakeField) => {
@@ -229,6 +231,15 @@ export class PatientsService {
     }
 
     return this.mapToResponse(updatedPatient);
+  }
+
+  async findByUserId(userId: string): Promise<PatientResponseDto | null> {
+    const patient = await this.patientRepo.findOne({
+      where: { userId },
+    });
+
+    if (!patient) return null;
+    return this.mapToResponse(patient);
   }
 
   async remove(id: string): Promise<{ message: string }> {

@@ -28,9 +28,16 @@ export class ActivityLogsController {
   @ApiOperation({ summary: "Liste des logs d'activité" })
   findAll(
     @Query() query: LogQueryDto,
-  ): Promise<{ data: ActivityLogResponseDto[]; meta: any }> {
+  ): Promise<{
+    logs: ActivityLogResponseDto[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
     return this.activityLogsService.findAll(query);
   }
+
 
   @Get(':id')
   @Roles('admin')

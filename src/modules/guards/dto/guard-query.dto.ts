@@ -11,4 +11,25 @@ export class GuardQueryDto {
   @IsOptional()
   @IsUUID()
   practitioner_id?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  start?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  end?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  from_date?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  to_date?: string;
 }
+

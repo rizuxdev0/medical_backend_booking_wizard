@@ -99,10 +99,10 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('docs', app, document);
 
-  // Seeders
-  await createAdminUser(app);
-  await seedAppointmentTypes(app);
-  await seedBillableItems(app);
+  // Seeders - Desactivés pour privilégier l'assistant de configuration wizard
+  // await createAdminUser(app);
+  // await seedAppointmentTypes(app);
+  // await seedBillableItems(app);
 
   const port = process.env.PORT || 3000;
   await app.listen(port);

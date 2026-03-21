@@ -5,7 +5,9 @@ import {
   IsOptional,
   Min,
 } from 'class-validator';
+import { Transform } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
+
 
 export class CreateCurrencyDto {
   @ApiProperty({ example: 'XOF' })
@@ -53,9 +55,15 @@ export class CreateCurrencyDto {
 
   @ApiProperty({ example: 1, required: false })
   @IsOptional()
+  @Transform(({ value }) => {
+    if (value === '' || value === null) return undefined;
+    const num = Number(value);
+    return isNaN(num) ? value : num;
+  })
   @IsNumber()
   @Min(0)
   exchange_rate?: number;
+
 }
 
 export class UpdateCurrencyDto extends CreateCurrencyDto {}

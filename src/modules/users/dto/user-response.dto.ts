@@ -16,4 +16,6 @@ export class UserResponseDto {
   created_at: Date;
   updated_at: Date;
   roles: RoleResponseDto[];
+  temp_password?: string;
+  otp_code?: string;
 }

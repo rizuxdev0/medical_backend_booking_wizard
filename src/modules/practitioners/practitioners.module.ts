@@ -18,6 +18,7 @@ import { PractitionerGuard } from './entities/practitioner-guard.entity';
   ],
   controllers: [PractitionersController],
   providers: [PractitionersService],
-  exports: [PractitionersService],
+  exports: [PractitionersService, TypeOrmModule],
 })
+
 export class PractitionersModule {}
