@@ -18,6 +18,11 @@ import { ConsultationNotesModule } from './modules/consultation-notes/consultati
 import { CurrenciesModule } from './modules/currencies/currencies.module';
 import { GuardsModule } from './modules/guards/guards.module';
 import { HealthModule } from './modules/health/health.module';
+import { SettingsModule } from './modules/settings/settings.module';
+import { RpcModule } from './modules/rpc/rpc.module';
+import { DocumentsModule } from './modules/documents/documents.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { InvitationsModule } from './modules/invitations/invitations.module';
 
 @Module({
   imports: [
@@ -47,6 +52,11 @@ import { HealthModule } from './modules/health/health.module';
     PermissionsModule,
     ConsultationNotesModule,
     HealthModule,
+    SettingsModule,
+    RpcModule,
+    DocumentsModule,
+    DashboardModule,
+    InvitationsModule,
   ],
   controllers: [],
   providers: [],

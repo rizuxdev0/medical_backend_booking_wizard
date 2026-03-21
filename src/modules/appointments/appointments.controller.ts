@@ -34,7 +34,7 @@ export class AppointmentsController {
   @ApiOperation({ summary: 'Liste des rendez-vous avec filtres' })
   findAll(
     @Query() query: AppointmentQueryDto,
-  ): Promise<{ data: AppointmentResponseDto[]; meta: any }> {
+  ): Promise<AppointmentResponseDto[]> {
     return this.appointmentsService.findAll(query);
   }
 

@@ -56,17 +56,14 @@ export class AppointmentsService {
 
   async findAll(
     query: AppointmentQueryDto,
-  ): Promise<{ data: AppointmentResponseDto[]; meta: any }> {
+  ): Promise<AppointmentResponseDto[]> {
     const {
       status,
       practitioner_id,
       patient_id,
       date_from,
       date_to,
-      page = 1,
-      limit = 20,
     } = query;
-    const skip = (page - 1) * limit;
 
     const whereCondition: any = {};
 
@@ -89,23 +86,27 @@ export class AppointmentsService {
       );
     }
 
-    const [appointments, total] = await this.appointmentRepo.findAndCount({
+    const appointments = await this.appointmentRepo.find({
       where: whereCondition,
-      skip,
-      take: limit,
       order: { scheduledAt: 'DESC' },
-      relations: ['patient', 'practitioner', 'appointmentType', 'resource'],
+      relations: ['patient', 'practitioner', 'practitioner.profile', 'appointmentType', 'resource'],
     });
 
-    return {
-      data: appointments.map((apt) => this.mapToResponse(apt)),
-      meta: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
-      },
-    };
+    return appointments.map((apt) => this.mapToResponse(apt));
+  }
+
+  async findAllAppointmentTypes(): Promise<any[]> {
+    const types = await this.appointmentTypeRepo.find({
+      where: { isActive: true },
+      order: { name: 'ASC' },
+    });
+
+    return types.map((t) => ({
+      id: t.id,
+      name: t.name,
+      color: t.color,
+      duration_minutes: t.durationMinutes,
+    }));
   }
 
   // ==================== DÉTAIL ====================
@@ -596,26 +597,34 @@ export class AppointmentsService {
     };
 
     if (appointment.patient) {
-      response.patient = {
+      response.patients = {
         id: appointment.patient.id,
         first_name: appointment.patient.firstName,
         last_name: appointment.patient.lastName,
         phone: appointment.patient.phone || null,
+        email: appointment.patient.email || null,
       };
     }
 
     if (appointment.practitioner) {
-      response.practitioner = {
+      response.practitioners = {
         id: appointment.practitioner.id,
-        first_name: appointment.practitioner.firstName || null,
-        last_name: appointment.practitioner.lastName || null,
         specialty: appointment.practitioner.specialty,
-        calendar_color: appointment.practitioner.calendarColor || '#3B82F6',
+        user_id: appointment.practitioner.userId,
+        profile: appointment.practitioner.profile
+          ? {
+              first_name: appointment.practitioner.profile.first_name,
+              last_name: appointment.practitioner.profile.last_name,
+            }
+          : {
+              first_name: appointment.practitioner.firstName,
+              last_name: appointment.practitioner.lastName,
+            },
       };
     }
 
     if (appointment.appointmentType) {
-      response.appointment_type = {
+      response.appointment_types = {
         id: appointment.appointmentType.id,
         name: appointment.appointmentType.name,
         duration_minutes: appointment.appointmentType.durationMinutes,

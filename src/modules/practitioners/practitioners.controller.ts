@@ -34,8 +34,22 @@ export class PractitionersController {
   @Get()
   @Roles('admin', 'doctor', 'secretary', 'nurse')
   @ApiOperation({ summary: 'Liste tous les praticiens' })
-  findAll(): Promise<PractitionerResponseDto[]> {
-    return this.practitionersService.findAll();
+  findAll(
+    @Query('full') full?: string,
+    @Query('include') include?: string,
+    @Query('fields') fields?: string,
+    @Query('active') active?: string,
+  ): Promise<PractitionerResponseDto[] | Partial<PractitionerResponseDto>[]> {
+    if (fields === 'id,first_name,last_name,specialty' && active === 'true') {
+      return this.practitionersService.findForSelect();
+    }
+
+    return this.practitionersService.findAll({
+      full: full === 'true',
+      include,
+      fields,
+      active: active === 'true',
+    });
   }
 
   @Get(':id')

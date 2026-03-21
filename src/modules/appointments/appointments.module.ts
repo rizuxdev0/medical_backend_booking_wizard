@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppointmentsService } from './appointments.service';
 import { AppointmentsController } from './appointments.controller';
+import { AppointmentTypesController } from './appointment-types.controller';
 import { Appointment } from './entities/appointment.entity';
 import { AppointmentType } from './entities/appointment-type.entity';
 import { ConsultationNote } from './entities/consultation-note.entity';
@@ -26,7 +27,7 @@ import { ResourcesModule } from '../resources/resources.module';
     ]),
     ResourcesModule,
   ],
-  controllers: [AppointmentsController],
+  controllers: [AppointmentsController, AppointmentTypesController],
   providers: [AppointmentsService],
   exports: [AppointmentsService],
 })

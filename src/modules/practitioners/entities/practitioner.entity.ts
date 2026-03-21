@@ -5,7 +5,10 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   OneToMany,
+  OneToOne,
+  JoinColumn,
 } from 'typeorm';
+import { Profile } from '../../users/entities/profile.entity';
 import { PractitionerAbsence } from './practitioner-absence.entity';
 import { PractitionerSchedule } from './practitioner-schedule.entity';
 import { PractitionerGuard } from './practitioner-guard.entity';
@@ -110,4 +113,8 @@ export class Practitioner {
 
   @OneToMany(() => PractitionerGuard, (guard) => guard.practitioner)
   guards: PractitionerGuard[];
+
+  @OneToOne(() => Profile)
+  @JoinColumn({ name: 'user_id' })
+  profile: Profile;
 }

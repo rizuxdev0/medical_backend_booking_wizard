@@ -1,6 +1,7 @@
 import {
   Controller,
   Get,
+  Post,
   Put,
   Delete,
   Param,
@@ -37,12 +38,21 @@ export class SettingsController {
 
   @Put(':key')
   @Roles('admin')
-  @ApiOperation({ summary: 'Créer ou mettre à jour un paramètre' })
+  @ApiOperation({ summary: 'Mettre à jour un paramètre par sa clé' })
   upsert(
     @Param('key') key: string,
     @Body() settingDto: SettingDto,
   ): Promise<SettingResponseDto> {
     settingDto.key = key;
+    return this.settingsService.upsert(settingDto);
+  }
+
+  @Post()
+  @Roles('admin')
+  @ApiOperation({ summary: 'Créer ou mettre à jour un paramètre' })
+  upsertRoot(
+    @Body() settingDto: SettingDto,
+  ): Promise<SettingResponseDto> {
     return this.settingsService.upsert(settingDto);
   }
 

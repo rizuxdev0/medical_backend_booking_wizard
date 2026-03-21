@@ -21,6 +21,10 @@ export class PatientQueryDto {
   @Max(100)
   limit?: number = 10;
 
+  @IsOptional()
+  @IsString()
+  fields?: string;
+
   get skip(): number {
     return ((this.page || 1) - 1) * (this.limit || 10);
   }

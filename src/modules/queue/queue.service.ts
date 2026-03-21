@@ -42,22 +42,18 @@ export class QueueService {
 
   async findAll(
     query: QueueQueryDto,
-  ): Promise<{ data: QueueEntryResponseDto[]; meta: any }> {
+  ): Promise<QueueEntryResponseDto[]> {
     const {
       status,
       practitioner_id,
       resource_id,
-      page = 1,
-      limit = 50,
     } = query;
-    const skip = (page - 1) * limit;
 
     const whereCondition: any = {};
 
     if (status) {
       whereCondition.status = status;
     } else {
-      // Par défaut, montrer seulement les entrées actives
       whereCondition.status = In(['waiting', 'called', 'in_progress']);
     }
 
@@ -69,10 +65,8 @@ export class QueueService {
       whereCondition.resourceId = resource_id;
     }
 
-    const [entries, total] = await this.queueEntryRepo.findAndCount({
+    const [entries] = await this.queueEntryRepo.findAndCount({
       where: whereCondition,
-      skip,
-      take: limit,
       order: {
         priority: 'DESC',
         queueNumber: 'ASC',
@@ -80,8 +74,7 @@ export class QueueService {
       relations: ['patient', 'practitioner', 'appointment', 'resource'],
     });
 
-    // Calculer les positions et temps d'attente estimés
-    const entriesWithPositions = await Promise.all(
+    return Promise.all(
       entries.map(async (entry, index) => {
         const position = index + 1;
         const estimatedWaitTime = await this.calculateEstimatedWaitTime(
@@ -92,22 +85,6 @@ export class QueueService {
         return this.mapToResponse(entry, position, estimatedWaitTime);
       }),
     );
-
-    return {
-      data: entriesWithPositions,
-      meta: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
-        waiting_count: await this.queueEntryRepo.count({
-          where: { status: 'waiting' },
-        }),
-        in_progress_count: await this.queueEntryRepo.count({
-          where: { status: 'in_progress' },
-        }),
-      },
-    };
   }
 
   // ==================== CHECK-IN ====================
@@ -307,7 +284,10 @@ export class QueueService {
     return this.mapToResponse(entry, position);
   }
 
-  async noShow(id: string): Promise<QueueEntryResponseDto> {
+  async updateStatus(
+    id: string,
+    dto: UpdateQueueStatusDto,
+  ): Promise<QueueEntryResponseDto> {
     const entry = await this.queueEntryRepo.findOne({
       where: { id },
       relations: ['patient', 'practitioner'],
@@ -317,15 +297,33 @@ export class QueueService {
       throw new NotFoundException(`Entrée avec l'ID ${id} non trouvée`);
     }
 
-    entry.status = 'no_show';
-    entry.endTime = new Date();
+    entry.status = dto.status;
+    if (dto.status === 'called' && !entry.calledTime) {
+      entry.calledTime = new Date();
+    } else if (dto.status === 'in_progress' && !entry.startTime) {
+      entry.startTime = new Date();
+    } else if (
+      (dto.status === 'completed' ||
+        dto.status === 'cancelled' ||
+        dto.status === 'no_show') &&
+      !entry.endTime
+    ) {
+      entry.endTime = new Date();
+    }
+
     await this.queueEntryRepo.save(entry);
 
-    // Mettre à jour le rendez-vous si existant
+    // Sync with appointment if needed
     if (entry.appointmentId) {
-      await this.appointmentRepo.update(entry.appointmentId, {
-        status: 'no_show',
-      });
+      if (dto.status === 'completed') {
+        await this.appointmentRepo.update(entry.appointmentId, {
+          status: 'completed',
+        });
+      } else if (dto.status === 'no_show') {
+        await this.appointmentRepo.update(entry.appointmentId, {
+          status: 'no_show',
+        });
+      }
     }
 
     const position = await this.getPosition(entry.id);

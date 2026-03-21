@@ -13,22 +13,25 @@ export class AppointmentResponseDto {
   updated_at: Date;
 
   // Relations enrichies
-  patient?: {
+  patients?: {
     id: string;
     first_name: string;
     last_name: string;
     phone: string | null;
+    email: string | null;
   };
 
-  practitioner?: {
+  practitioners?: {
     id: string;
-    first_name: string | null;
-    last_name: string | null;
     specialty: string;
-    calendar_color: string;
+    user_id: string | null;
+    profile: {
+      first_name: string | null;
+      last_name: string | null;
+    };
   };
 
-  appointment_type?: {
+  appointment_types?: {
     id: string;
     name: string;
     duration_minutes: number;

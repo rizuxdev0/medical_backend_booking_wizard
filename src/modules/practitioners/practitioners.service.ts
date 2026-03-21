@@ -31,11 +31,44 @@ export class PractitionersService {
 
   // ==================== CRUD PRINCIPAL ====================
 
-  async findAll(): Promise<PractitionerResponseDto[]> {
+  async findAll(query?: {
+    full?: boolean;
+    include?: string;
+    fields?: string;
+    active?: boolean;
+  }): Promise<PractitionerResponseDto[]> {
+    const where: any = {};
+    if (query?.active) {
+      where.isActive = true;
+    }
+
+    const relations: string[] = [];
+    if (query?.full || query?.include === 'profile') {
+      relations.push('profile');
+    }
+
     const practitioners = await this.practitionerRepo.find({
+      where,
+      relations,
       order: { lastName: 'ASC', firstName: 'ASC' },
     });
-    return practitioners.map((p) => this.mapToResponse(p));
+
+    return practitioners.map((p) => this.mapToResponse(p, query?.full));
+  }
+
+  async findForSelect(): Promise<Partial<PractitionerResponseDto>[]> {
+    const practitioners = await this.practitionerRepo.find({
+      where: { isActive: true },
+      select: ['id', 'firstName', 'lastName', 'specialty'],
+      order: { lastName: 'ASC' },
+    });
+
+    return practitioners.map((p) => ({
+      id: p.id,
+      first_name: p.firstName,
+      last_name: p.lastName,
+      specialty: p.specialty,
+    }));
   }
 
   async findOne(id: string): Promise<PractitionerResponseDto> {
@@ -417,8 +450,11 @@ export class PractitionersService {
 
   // ==================== MAPPING ====================
 
-  private mapToResponse(practitioner: Practitioner): PractitionerResponseDto {
-    return {
+  private mapToResponse(
+    practitioner: Practitioner,
+    includeFull?: boolean,
+  ): PractitionerResponseDto {
+    const response: PractitionerResponseDto = {
       id: practitioner.id,
       user_id: practitioner.userId,
       specialty: practitioner.specialty,
@@ -430,7 +466,10 @@ export class PractitionersService {
       bio: practitioner.bio || null,
       education: practitioner.education || null,
       license_number: practitioner.licenseNumber || null,
-      consultation_fee: practitioner.consultationFee || null,
+      consultation_fee:
+        practitioner.consultationFee !== null
+          ? Number(practitioner.consultationFee)
+          : null,
       years_of_experience: practitioner.yearsOfExperience || null,
       languages: practitioner.languages || ['Français'],
       calendar_color: practitioner.calendarColor || '#3B82F6',
@@ -448,5 +487,17 @@ export class PractitionersService {
       created_at: practitioner.createdAt,
       updated_at: practitioner.updatedAt,
     };
+
+    if (practitioner.profile) {
+      response.profiles = {
+        first_name: practitioner.profile.first_name,
+        last_name: practitioner.profile.last_name,
+        email: practitioner.profile.email,
+        phone: practitioner.profile.phone,
+        avatar_url: practitioner.profile.avatar_url,
+      };
+    }
+
+    return response;
   }
 }

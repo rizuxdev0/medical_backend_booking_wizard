@@ -45,6 +45,13 @@ export class ConsultationNotesService {
     return this.mapToResponse(note);
   }
 
+  async findAll(): Promise<ConsultationNote[]> {
+    return this.noteRepo.find({
+      order: { createdAt: 'DESC' },
+      relations: ['appointment', 'patient', 'practitioner'],
+    });
+  }
+
   async findOne(id: string): Promise<ConsultationNoteResponseDto> {
     const note = await this.noteRepo.findOne({
       where: { id },

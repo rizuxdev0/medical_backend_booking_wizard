@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  OnModuleInit,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -15,13 +16,21 @@ import { UserResponseDto } from './dto/user-response.dto';
 import { RoleResponseDto } from './dto/role-response.dto';
 
 @Injectable()
-export class UsersService {
+export class UsersService implements OnModuleInit {
   constructor(
     @InjectRepository(Profile)
     private profileRepo: Repository<Profile>,
     @InjectRepository(UserRole)
     private roleRepo: Repository<UserRole>,
   ) {}
+
+  async onModuleInit() {
+    const exists = await this.adminExists();
+    if (!exists) {
+      console.log('--- SEEDING INITIAL ADMIN ---');
+      await this.createDefaultAdmin();
+    }
+  }
 
   async findAll(
     query: PaginationDto,
@@ -244,6 +253,70 @@ export class UsersService {
     await this.roleRepo.remove(role);
 
     return { message: `Rôle ${roleName} supprimé avec succès` };
+  }
+
+  async adminExists(): Promise<boolean> {
+    const adminRole = await this.roleRepo.findOne({
+      where: { role: 'admin' as any },
+    });
+    return !!adminRole;
+  }
+
+  async bootstrapFirstAdmin(userId: string): Promise<boolean> {
+    // Vérifier si un admin existe déjà
+    const exists = await this.adminExists();
+    if (exists) {
+      throw new BadRequestException('Un administrateur existe déjà');
+    }
+
+    // Ajouter le rôle admin à l'utilisateur
+    const role = this.roleRepo.create({
+      user_id: userId,
+      role: 'admin' as any,
+    });
+    await this.roleRepo.save(role);
+    return true;
+  }
+
+  async createDefaultAdmin(): Promise<UserResponseDto> {
+    const salt = await bcrypt.genSalt(12);
+    const passwordHash = await bcrypt.hash('Eric123456!', salt);
+
+    const admin = this.profileRepo.create({
+      email: 'eric@gmail.com',
+      password_hash: passwordHash,
+      first_name: 'Eric',
+      last_name: 'Admin',
+      is_active: true,
+    });
+
+    await this.profileRepo.save(admin);
+
+    const adminRole = this.roleRepo.create({
+      user_id: admin.id,
+      role: 'admin' as any,
+    });
+    await this.roleRepo.save(adminRole);
+
+    console.log(`ADMIN CREATED: eric@gmail.com / Eric123456!`);
+    return this.mapToUserResponse(admin, [adminRole]);
+  }
+
+  async ensureInitialized(userId: string, email: string): Promise<void> {
+    const user = await this.profileRepo.findOne({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      // Créer un profil de base si inexistant (pour auth externe comme Supabase)
+      const newUser = this.profileRepo.create({
+        id: userId,
+        email: email,
+        password_hash: 'EXTERNAL_AUTH', // Mot de passe bidon car géré en amont
+        is_active: true,
+      });
+      await this.profileRepo.save(newUser);
+    }
   }
 
   private sanitizeUser(user: Profile): Omit<Profile, 'password_hash'> {

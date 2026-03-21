@@ -49,17 +49,14 @@ export class InvoicesService {
 
   async findAll(
     query: InvoiceQueryDto,
-  ): Promise<{ data: InvoiceResponseDto[]; meta: any }> {
+  ): Promise<InvoiceResponseDto[]> {
     const {
       status,
       patient_id,
       practitioner_id,
       date_from,
       date_to,
-      page = 1,
-      limit = 20,
     } = query;
-    const skip = (page - 1) * limit;
 
     const whereCondition: any = {};
 
@@ -82,23 +79,23 @@ export class InvoicesService {
       );
     }
 
-    const [invoices, total] = await this.invoiceRepo.findAndCount({
+    const invoices = await this.invoiceRepo.find({
       where: whereCondition,
-      skip,
-      take: limit,
       order: { issueDate: 'DESC', createdAt: 'DESC' },
       relations: ['patient', 'practitioner'],
     });
 
-    return {
-      data: await Promise.all(invoices.map((inv) => this.mapToResponse(inv))),
-      meta: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
-      },
-    };
+    return Promise.all(invoices.map((inv) => this.mapToResponse(inv)));
+  }
+
+  async findByPatient(patientId: string): Promise<InvoiceResponseDto[]> {
+    const invoices = await this.invoiceRepo.find({
+      where: { patientId },
+      order: { issueDate: 'DESC' },
+      relations: ['practitioner'],
+    });
+
+    return Promise.all(invoices.map((inv) => this.mapToResponse(inv)));
   }
 
   // ==================== DÉTAIL FACTURE ====================
@@ -499,7 +496,7 @@ export class InvoicesService {
 
   // ==================== TABLEAU DE BORD ====================
 
-  async getDashboard(): Promise<BillingDashboardDto> {
+  async getStats(): Promise<BillingDashboardDto> {
     const today = new Date();
 
     const allInvoices = await this.invoiceRepo.find();

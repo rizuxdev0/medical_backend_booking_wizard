@@ -32,12 +32,12 @@ import { Roles } from '../../common/decorators/roles.decorator';
 export class QueueController {
   constructor(private readonly queueService: QueueService) {}
 
-  @Get()
+  @Get('entries')
   @Roles('admin', 'doctor', 'secretary', 'nurse')
   @ApiOperation({ summary: "Liste des entrées de la file d'attente" })
   findAll(
     @Query() query: QueueQueryDto,
-  ): Promise<{ data: QueueEntryResponseDto[]; meta: any }> {
+  ): Promise<QueueEntryResponseDto[]> {
     return this.queueService.findAll(query);
   }
 
@@ -55,39 +55,14 @@ export class QueueController {
     return this.queueService.checkIn(checkInDto);
   }
 
-  @Patch(':id/call')
+  @Patch('entries/:id/status')
   @Roles('admin', 'doctor', 'secretary', 'nurse')
-  @ApiOperation({ summary: 'Appeler un patient' })
-  call(@Param('id') id: string): Promise<QueueEntryResponseDto> {
-    return this.queueService.call(id);
-  }
-
-  @Patch(':id/start')
-  @Roles('admin', 'doctor', 'secretary', 'nurse')
-  @ApiOperation({ summary: 'Démarrer la consultation' })
-  start(@Param('id') id: string): Promise<QueueEntryResponseDto> {
-    return this.queueService.start(id);
-  }
-
-  @Patch(':id/complete')
-  @Roles('admin', 'doctor', 'secretary', 'nurse')
-  @ApiOperation({ summary: 'Terminer la consultation' })
-  complete(@Param('id') id: string): Promise<QueueEntryResponseDto> {
-    return this.queueService.complete(id);
-  }
-
-  @Patch(':id/cancel')
-  @Roles('admin', 'doctor', 'secretary')
-  @ApiOperation({ summary: "Annuler l'entrée dans la file" })
-  cancel(@Param('id') id: string): Promise<QueueEntryResponseDto> {
-    return this.queueService.cancel(id);
-  }
-
-  @Patch(':id/no-show')
-  @Roles('admin', 'doctor', 'secretary')
-  @ApiOperation({ summary: 'Marquer comme absent' })
-  noShow(@Param('id') id: string): Promise<QueueEntryResponseDto> {
-    return this.queueService.noShow(id);
+  @ApiOperation({ summary: "Mettre à jour le statut d'une entrée" })
+  updateStatus(
+    @Param('id') id: string,
+    @Body() dto: UpdateQueueStatusDto,
+  ): Promise<QueueEntryResponseDto> {
+    return this.queueService.updateStatus(id, dto);
   }
 
   @Get('settings')

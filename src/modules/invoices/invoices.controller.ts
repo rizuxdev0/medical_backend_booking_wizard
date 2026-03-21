@@ -37,8 +37,17 @@ export class InvoicesController {
   @ApiOperation({ summary: 'Liste des factures avec filtres' })
   findAll(
     @Query() query: InvoiceQueryDto,
-  ): Promise<{ data: InvoiceResponseDto[]; meta: any }> {
+  ): Promise<InvoiceResponseDto[]> {
     return this.invoicesService.findAll(query);
+  }
+
+  @Get('patients/:patientId')
+  @Roles('admin', 'accountant', 'secretary', 'doctor')
+  @ApiOperation({ summary: "Liste des factures d'un patient" })
+  findByPatient(
+    @Param('patientId') patientId: string,
+  ): Promise<InvoiceResponseDto[]> {
+    return this.invoicesService.findByPatient(patientId);
   }
 
   @Get('unpaid')
@@ -48,11 +57,11 @@ export class InvoicesController {
     return this.invoicesService.getUnpaidInvoices();
   }
 
-  @Get('dashboard')
+  @Get('stats')
   @Roles('admin', 'accountant')
   @ApiOperation({ summary: 'Tableau de bord de facturation' })
-  getDashboard(): Promise<BillingDashboardDto> {
-    return this.invoicesService.getDashboard();
+  getStats(): Promise<BillingDashboardDto> {
+    return this.invoicesService.getStats();
   }
 
   @Get(':id')

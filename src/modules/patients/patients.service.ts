@@ -20,7 +20,7 @@ export class PatientsService {
 
   async findAll(
     query: PatientQueryDto,
-  ): Promise<{ data: PatientResponseDto[]; meta: any }> {
+  ): Promise<PatientResponseDto[]> {
     const { search, page = 1, limit = 10 } = query;
     const skip = (page - 1) * limit;
 
@@ -35,22 +35,27 @@ export class PatientsService {
       ];
     }
 
-    const [patients, total] = await this.patientRepo.findAndCount({
+    const [patients] = await this.patientRepo.findAndCount({
       where: whereCondition,
       skip,
       take: limit,
-      order: { createdAt: 'DESC' }, // Changé de created_at à createdAt
+      order: { lastName: 'ASC' }, // Sort by lastName as per guide
     });
 
-    return {
-      data: patients.map((patient) => this.mapToResponse(patient)),
-      meta: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
-      },
-    };
+    return patients.map((patient) => this.mapToResponse(patient));
+  }
+
+  async findAllForSelect(): Promise<Partial<PatientResponseDto>[]> {
+    const patients = await this.patientRepo.find({
+      select: ['id', 'firstName', 'lastName'],
+      order: { lastName: 'ASC' },
+    });
+
+    return patients.map((patient) => ({
+      id: patient.id,
+      first_name: patient.firstName,
+      last_name: patient.lastName,
+    }));
   }
 
   async findOne(id: string): Promise<PatientResponseDto> {

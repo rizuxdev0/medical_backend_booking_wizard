@@ -8,6 +8,7 @@ import {
   Delete,
   UseGuards,
   Query,
+  Put,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { PatientsService } from './patients.service';
@@ -32,7 +33,10 @@ export class PatientsController {
   @ApiOperation({ summary: 'Liste tous les patients' })
   findAll(
     @Query() query: PatientQueryDto,
-  ): Promise<{ data: PatientResponseDto[]; meta: any }> {
+  ): Promise<PatientResponseDto[] | Partial<PatientResponseDto>[]> {
+    if (query.fields === 'id,first_name,last_name') {
+      return this.patientsService.findAllForSelect();
+    }
     return this.patientsService.findAll(query);
   }
 
@@ -53,9 +57,19 @@ export class PatientsController {
     return this.patientsService.create(createPatientDto, user.id);
   }
 
+  @Put(':id')
+  @Roles('admin', 'doctor', 'secretary')
+  @ApiOperation({ summary: 'Mettre à jour un patient (PUT)' })
+  replace(
+    @Param('id') id: string,
+    @Body() updatePatientDto: UpdatePatientDto,
+  ): Promise<PatientResponseDto> {
+    return this.patientsService.update(id, updatePatientDto);
+  }
+
   @Patch(':id')
   @Roles('admin', 'doctor', 'secretary')
-  @ApiOperation({ summary: 'Modifier un patient' })
+  @ApiOperation({ summary: 'Modifier un patient (PATCH)' })
   update(
     @Param('id') id: string,
     @Body() updatePatientDto: UpdatePatientDto,

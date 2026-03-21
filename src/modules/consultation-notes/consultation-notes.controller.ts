@@ -19,16 +19,23 @@ import {
 } from './dto/create-consultation-note.dto';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 
-@ApiTags('consultation-notes')
+@ApiTags('consultations')
 @ApiBearerAuth()
-@Controller('consultation-notes')
+@Controller()
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class ConsultationNotesController {
   constructor(
     private readonly consultationNotesService: ConsultationNotesService,
   ) {}
 
-  @Get('by-appointment/:appointmentId')
+  @Get('consultations')
+  @Roles('admin', 'doctor', 'nurse')
+  @ApiOperation({ summary: 'Liste toutes les consultations' })
+  findAll() {
+    return this.consultationNotesService.findAll();
+  }
+
+  @Get('appointments/:appointmentId/consultation')
   @Roles('admin', 'doctor', 'nurse')
   @ApiOperation({
     summary: "Récupérer la note de consultation d'un rendez-vous",
@@ -39,14 +46,14 @@ export class ConsultationNotesController {
     return this.consultationNotesService.findByAppointment(appointmentId);
   }
 
-  @Get(':id')
+  @Get('consultations/:id')
   @Roles('admin', 'doctor', 'nurse')
   @ApiOperation({ summary: 'Récupérer une note de consultation par son ID' })
   findOne(@Param('id') id: string): Promise<ConsultationNoteResponseDto> {
     return this.consultationNotesService.findOne(id);
   }
 
-  @Post()
+  @Post('consultations')
   @Roles('admin', 'doctor')
   @ApiOperation({ summary: 'Créer une note de consultation' })
   create(
@@ -56,7 +63,7 @@ export class ConsultationNotesController {
     return this.consultationNotesService.create(createNoteDto, user.id);
   }
 
-  @Patch(':id')
+  @Patch('consultations/:id')
   @Roles('admin', 'doctor')
   @ApiOperation({ summary: 'Modifier une note de consultation' })
   update(
@@ -66,7 +73,7 @@ export class ConsultationNotesController {
     return this.consultationNotesService.update(id, updateNoteDto);
   }
 
-  @Post(':id/close')
+  @Post('consultations/:id/close')
   @Roles('admin', 'doctor')
   @ApiOperation({ summary: 'Fermer une note de consultation' })
   close(
