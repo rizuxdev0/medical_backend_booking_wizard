@@ -2,6 +2,7 @@ import { Injectable, UnauthorizedException, NotFoundException, BadRequestExcepti
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThan } from 'typeorm';
 import * as bcrypt from 'bcrypt';
+import { MailerService } from '@nestjs-modules/mailer';
 import { UserInvitation } from '../users/entities/user-invitation.entity';
 import { Profile } from '../users/entities/profile.entity';
 import { UserRole } from '../users/entities/user-role.entity';
@@ -15,6 +16,7 @@ export class InvitationsService {
     private profileRepo: Repository<Profile>,
     @InjectRepository(UserRole)
     private roleRepo: Repository<UserRole>,
+    private mailerService: MailerService,
   ) {}
 
   async createInvitation(email: string, userId: string, createdBy?: string) {
@@ -34,8 +36,27 @@ export class InvitationsService {
 
     await this.invitationRepo.save(invitation);
 
-    // MOCK: Send email here. In dev, log to console.
-    console.log(`[INVITATION] Code for ${email}: ${otpCode}. Temp password: ${tempPassword}`);
+    // Send Real Email
+    try {
+      await this.mailerService.sendMail({
+        to: email,
+        subject: 'Vérification de votre compte MedAgenda',
+        html: `
+          <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+            <h2 style="color: #0070f3; text-align: center;">Bienvenue sur MedAgenda</h2>
+            <p>Votre compte a été créé. Pour l'activer, veuillez utiliser le code suivant :</p>
+            <div style="font-size: 32px; font-weight: bold; text-align: center; letter-spacing: 5px; margin: 30px 0; color: #000;">
+              ${otpCode}
+            </div>
+            <p><strong>Mot de passe temporaire :</strong> <code style="background: #f4f4f4; padding: 2px 5px; border-radius: 4px;">${tempPassword}</code></p>
+            <p style="font-size: 14px; color: #666; margin-top: 30px;">Ce code expire dans 7 jours.</p>
+          </div>
+        `,
+      });
+      console.log(`[INVITATION] Email envoyé à ${email}`);
+    } catch (err) {
+      console.error(`[INVITATION] Erreur d'envoi d'email à ${email}:`, err);
+    }
 
     return { message: 'Invitation créée avec succès', invitation_id: invitation.id };
   }

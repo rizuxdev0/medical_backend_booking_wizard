@@ -19,7 +19,7 @@ export class RpcController {
     return { result: exists };
   }
 
-  @Get('setup-completed')
+  @Get('is-setup-completed')
   @ApiOperation({ summary: 'Vérifier si le setup est terminé' })
   async setupCompleted() {
     const exists = await this.usersService.adminExists();

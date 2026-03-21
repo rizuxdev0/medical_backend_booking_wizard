@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { databaseConfig } from './config/database.config';
 import { AuthModule } from './modules/auth/auth.module';
@@ -23,12 +23,31 @@ import { RpcModule } from './modules/rpc/rpc.module';
 import { DocumentsModule } from './modules/documents/documents.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { InvitationsModule } from './modules/invitations/invitations.module';
+import { ChatModule } from './modules/chat/chat.module';
+import { MailerModule } from '@nestjs-modules/mailer';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
+    }),
+    MailerModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        transport: {
+          host: config.get('SMTP_HOST'),
+          port: config.get('SMTP_PORT'),
+          secure: config.get('SMTP_PORT') === '465',
+          auth: {
+            user: config.get('SMTP_USER'),
+            pass: config.get('SMTP_PASS'),
+          },
+        },
+        defaults: {
+          from: config.get('SMTP_FROM') || '"MedAgenda" <noreply@medagenda.com>',
+        },
+      }),
     }),
     TypeOrmModule.forRootAsync({
       useFactory: databaseConfig,
@@ -57,6 +76,7 @@ import { InvitationsModule } from './modules/invitations/invitations.module';
     DocumentsModule,
     DashboardModule,
     InvitationsModule,
+    ChatModule,
   ],
   controllers: [],
   providers: [],

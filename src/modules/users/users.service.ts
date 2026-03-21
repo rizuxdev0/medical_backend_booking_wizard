@@ -9,6 +9,8 @@ import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { Profile } from './entities/profile.entity';
 import { UserRole } from './entities/user-role.entity';
+import { InvitationsService } from '../invitations/invitations.service';
+import { forwardRef, Inject } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PaginationDto } from '../../common/dto/pagination.dto';
@@ -22,13 +24,21 @@ export class UsersService implements OnModuleInit {
     private profileRepo: Repository<Profile>,
     @InjectRepository(UserRole)
     private roleRepo: Repository<UserRole>,
+    @Inject(forwardRef(() => InvitationsService))
+    private invitationsService: InvitationsService,
   ) {}
 
   async onModuleInit() {
-    const exists = await this.adminExists();
-    if (!exists) {
-      console.log('--- SEEDING INITIAL ADMIN ---');
-      await this.createDefaultAdmin();
+    const admin = await this.profileRepo.findOne({ where: { email: 'eric@gmail.com' } });
+    const salt = await bcrypt.genSalt(12);
+    const passwordHash = await bcrypt.hash('Eric123456!', salt);
+
+    if (!admin) {
+      console.log('--- SEEDING INITIAL ADMIN: eric@gmail.com ---');
+      await this.createDefaultAdmin(passwordHash);
+    } else {
+      console.log('--- RESETTING ADMIN PASSWORD: eric@gmail.com ---');
+      await this.profileRepo.update(admin.id, { password_hash: passwordHash });
     }
   }
 
@@ -125,6 +135,10 @@ export class UsersService implements OnModuleInit {
       await this.roleRepo.save(role);
       roles.push(role);
     }
+
+    // Créer une invitation si l'utilisateur n'est pas déjà actif (ex: créé par admin)
+    // Sauf si c'est un patient (qui s'inscrit lui-même typiquement, mais ici c'est admin-driven)
+    await this.invitationsService.createInvitation(user.email, user.id);
 
     return this.mapToUserResponse(user, roles);
   }
@@ -278,9 +292,8 @@ export class UsersService implements OnModuleInit {
     return true;
   }
 
-  async createDefaultAdmin(): Promise<UserResponseDto> {
-    const salt = await bcrypt.genSalt(12);
-    const passwordHash = await bcrypt.hash('Eric123456!', salt);
+  async createDefaultAdmin(forcedHash?: string): Promise<UserResponseDto> {
+    const passwordHash = forcedHash || await bcrypt.hash('Eric123456!', 12);
 
     const admin = this.profileRepo.create({
       email: 'eric@gmail.com',
@@ -292,14 +305,20 @@ export class UsersService implements OnModuleInit {
 
     await this.profileRepo.save(admin);
 
-    const adminRole = this.roleRepo.create({
-      user_id: admin.id,
-      role: 'admin' as any,
-    });
-    await this.roleRepo.save(adminRole);
+    const adminRoleNames = ['admin', 'doctor', 'secretary', 'patient', 'nurse', 'accountant', 'supervisor'];
+    const roles: UserRole[] = [];
 
-    console.log(`ADMIN CREATED: eric@gmail.com / Eric123456!`);
-    return this.mapToUserResponse(admin, [adminRole]);
+    for (const roleName of adminRoleNames) {
+      const role = this.roleRepo.create({
+        user_id: admin.id,
+        role: roleName as any,
+      });
+      await this.roleRepo.save(role);
+      roles.push(role);
+    }
+
+    console.log(`ADMIN CREATED: eric@gmail.com / Eric123456! with roles: ${adminRoleNames.join(', ')}`);
+    return this.mapToUserResponse(admin, roles);
   }
 
   async ensureInitialized(userId: string, email: string): Promise<void> {

@@ -150,6 +150,8 @@ export class AuthService {
       where: { email },
     });
 
+    console.log(`[AUTH] Tentative de connexion pour ${email}. Utilisateur trouvé: ${!!user}`);
+
     if (!user || !(await bcrypt.compare(password, user.password_hash))) {
       throw new UnauthorizedException('Email ou mot de passe incorrect');
     }
