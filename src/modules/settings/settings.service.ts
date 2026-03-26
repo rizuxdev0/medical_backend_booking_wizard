@@ -4,6 +4,8 @@ import { Repository } from 'typeorm';
 import { Setting } from './entities/setting.entity';
 import { SettingDto, SettingResponseDto } from './dto/setting.dto';
 
+const SENSITIVE_KEYS = ['email_config', 'smtp_pass', 'smtp_user', 'smtp_host'];
+
 @Injectable()
 export class SettingsService {
   constructor(
@@ -11,11 +13,17 @@ export class SettingsService {
     private settingsRepo: Repository<Setting>,
   ) {}
 
-  async findAll(): Promise<SettingResponseDto[]> {
+  async findAll(filterSensitive: boolean = false): Promise<SettingResponseDto[]> {
     const settings = await this.settingsRepo.find({
       order: { key: 'ASC' },
     });
-    return settings.map((s) => this.mapToResponse(s));
+    
+    let filtered = settings;
+    if (filterSensitive) {
+      filtered = settings.filter(s => !SENSITIVE_KEYS.includes(s.key.toLowerCase()));
+    }
+    
+    return filtered.map((s) => this.mapToResponse(s));
   }
 
   async findOne(key: string): Promise<SettingResponseDto> {

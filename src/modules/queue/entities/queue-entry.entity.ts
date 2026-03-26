@@ -12,6 +12,16 @@ import { Practitioner } from '../../practitioners/entities/practitioner.entity';
 import { Appointment } from '../../appointments/entities/appointment.entity';
 import { Resource } from '../../resources/entities/resource.entity';
 
+export enum QueueStatus {
+  WAITING = 'waiting',
+  CALLED = 'called',
+  IN_PROGRESS = 'in_progress',
+  COMPLETED = 'completed',
+  CANCELLED = 'cancelled',
+  NO_SHOW = 'no_show',
+  DISCHARGED = 'discharged',
+}
+
 @Entity('queue_entries')
 export class QueueEntry {
   @PrimaryGeneratedColumn('uuid')
@@ -35,8 +45,12 @@ export class QueueEntry {
   @Column({ default: 0 })
   priority: number; // Plus le nombre est élevé, plus la priorité est haute
 
-  @Column({ default: 'waiting' })
-  status: string; // waiting, called, in_progress, completed, cancelled, no_show
+  @Column({
+    type: 'enum',
+    enum: QueueStatus,
+    default: QueueStatus.WAITING,
+  })
+  status: QueueStatus; // waiting, called, in_progress, completed, cancelled, no_show
 
   @Column({
     name: 'check_in_time',

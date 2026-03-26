@@ -28,8 +28,7 @@ export class PractitionerSchedule {
   @Column({ name: 'is_available', default: true })
   isAvailable: boolean;
 
-  @CreateDateColumn({ name: 'created_at' })
-  createdAt: Date;
+
 
   @ManyToOne(() => Practitioner, (practitioner) => practitioner.schedules)
   @JoinColumn({ name: 'practitioner_id' })

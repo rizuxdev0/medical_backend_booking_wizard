@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In, Between, IsNull } from 'typeorm';
-import { QueueEntry } from './entities/queue-entry.entity';
+import { QueueEntry, QueueStatus } from './entities/queue-entry.entity';
 import { QueueSettings } from './entities/queue-settings.entity';
 import { CheckInDto } from './dto/check-in.dto';
 import { UpdateQueueStatusDto } from './dto/update-status.dto';
@@ -52,7 +52,11 @@ export class QueueService {
     const whereCondition: any = {};
 
     if (status) {
-      whereCondition.status = status;
+      if (status === 'active') {
+        whereCondition.status = In(['waiting', 'called', 'in_progress']);
+      } else {
+        whereCondition.status = status;
+      }
     } else {
       whereCondition.status = In(['waiting', 'called', 'in_progress']);
     }
@@ -125,7 +129,7 @@ export class QueueService {
 
     // 4. Calculer le temps d'attente estimé
     const waitingCount = await this.queueEntryRepo.count({
-      where: { status: 'waiting' },
+      where: { status: QueueStatus.WAITING },
     });
     const avgTime = settings?.averageServiceTimeMinutes || 15;
     const estimatedWaitMinutes = waitingCount * avgTime;
@@ -135,7 +139,7 @@ export class QueueService {
       patientId: checkInDto.patient_id,
       priority: checkInDto.priority || 0,
       estimatedWaitMinutes,
-      status: 'waiting',
+      status: QueueStatus.WAITING,
       notes: checkInDto.notes,
     };
 
@@ -203,7 +207,7 @@ export class QueueService {
       );
     }
 
-    entry.status = 'called';
+    entry.status = QueueStatus.CALLED;
     entry.calledTime = new Date();
     await this.queueEntryRepo.save(entry);
 
@@ -227,7 +231,7 @@ export class QueueService {
       );
     }
 
-    entry.status = 'in_progress';
+    entry.status = QueueStatus.IN_PROGRESS;
     entry.startTime = new Date();
     await this.queueEntryRepo.save(entry);
 
@@ -251,7 +255,7 @@ export class QueueService {
       );
     }
 
-    entry.status = 'completed';
+    entry.status = QueueStatus.COMPLETED;
     entry.endTime = new Date();
     await this.queueEntryRepo.save(entry);
 
@@ -276,7 +280,7 @@ export class QueueService {
       throw new NotFoundException(`Entrée avec l'ID ${id} non trouvée`);
     }
 
-    entry.status = 'cancelled';
+    entry.status = QueueStatus.CANCELLED;
     entry.endTime = new Date();
     await this.queueEntryRepo.save(entry);
 
@@ -288,6 +292,8 @@ export class QueueService {
     id: string,
     dto: UpdateQueueStatusDto,
   ): Promise<QueueEntryResponseDto> {
+    console.log(`Updating queue entry ${id} status to:`, dto.status);
+    
     const entry = await this.queueEntryRepo.findOne({
       where: { id },
       relations: ['patient', 'practitioner'],
@@ -297,15 +303,18 @@ export class QueueService {
       throw new NotFoundException(`Entrée avec l'ID ${id} non trouvée`);
     }
 
-    entry.status = dto.status;
-    if (dto.status === 'called' && !entry.calledTime) {
+    if (dto.status) {
+      entry.status = dto.status;
+    }
+    if (dto.status === QueueStatus.CALLED && !entry.calledTime) {
       entry.calledTime = new Date();
-    } else if (dto.status === 'in_progress' && !entry.startTime) {
+    } else if (dto.status === QueueStatus.IN_PROGRESS && !entry.startTime) {
       entry.startTime = new Date();
     } else if (
-      (dto.status === 'completed' ||
-        dto.status === 'cancelled' ||
-        dto.status === 'no_show') &&
+      (dto.status === QueueStatus.COMPLETED ||
+        dto.status === QueueStatus.DISCHARGED ||
+        dto.status === QueueStatus.CANCELLED ||
+        dto.status === QueueStatus.NO_SHOW) &&
       !entry.endTime
     ) {
       entry.endTime = new Date();
@@ -315,11 +324,11 @@ export class QueueService {
 
     // Sync with appointment if needed
     if (entry.appointmentId) {
-      if (dto.status === 'completed') {
+      if (dto.status === QueueStatus.COMPLETED || dto.status === QueueStatus.DISCHARGED) {
         await this.appointmentRepo.update(entry.appointmentId, {
           status: 'completed',
         });
-      } else if (dto.status === 'no_show') {
+      } else if (dto.status === QueueStatus.NO_SHOW) {
         await this.appointmentRepo.update(entry.appointmentId, {
           status: 'no_show',
         });
@@ -337,17 +346,17 @@ export class QueueService {
     today.setHours(0, 0, 0, 0);
 
     const waiting = await this.queueEntryRepo.count({
-      where: { status: 'waiting' },
+      where: { status: QueueStatus.WAITING },
     });
     const inProgress = await this.queueEntryRepo.count({
-      where: { status: 'in_progress' },
+      where: { status: QueueStatus.IN_PROGRESS },
     });
     const called = await this.queueEntryRepo.count({
-      where: { status: 'called' },
+      where: { status: QueueStatus.CALLED },
     });
     const completedToday = await this.queueEntryRepo.count({
       where: {
-        status: 'completed',
+        status: In([QueueStatus.COMPLETED, QueueStatus.DISCHARGED]),
         endTime: Between(today, new Date()),
       },
     });
@@ -355,7 +364,7 @@ export class QueueService {
     // Calculer le temps d'attente moyen
     const completedEntries = await this.queueEntryRepo.find({
       where: {
-        status: 'completed',
+        status: In([QueueStatus.COMPLETED, QueueStatus.DISCHARGED]),
         endTime: Between(today, new Date()),
       },
     });
@@ -397,13 +406,13 @@ export class QueueService {
       const waitingForPrac = await this.queueEntryRepo.count({
         where: {
           practitionerId: p.id,
-          status: 'waiting',
+          status: QueueStatus.WAITING,
         },
       });
       const inProgressForPrac = await this.queueEntryRepo.count({
         where: {
           practitionerId: p.id,
-          status: 'in_progress',
+          status: QueueStatus.IN_PROGRESS,
         },
       });
 

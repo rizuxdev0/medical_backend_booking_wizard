@@ -48,11 +48,16 @@ export class AppointmentsController {
   @Post()
   @Roles('admin', 'doctor', 'secretary')
   @ApiOperation({ summary: 'Créer un nouveau rendez-vous' })
-  create(
+  async create(
     @Body() createAppointmentDto: CreateAppointmentDto,
     @CurrentUser() user,
   ): Promise<AppointmentResponseDto> {
-    return this.appointmentsService.create(createAppointmentDto, user.id);
+    try {
+      return await this.appointmentsService.create(createAppointmentDto, user.id);
+    } catch (e) {
+      require('fs').writeFileSync('appointment_error.log', e.stack || e.message);
+      throw e;
+    }
   }
 
   @Patch(':id')

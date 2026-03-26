@@ -7,6 +7,7 @@ import {
   Param,
   Body,
   UseGuards,
+  Request,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { MailerService } from '@nestjs-modules/mailer';
@@ -20,7 +21,6 @@ import * as nodemailer from 'nodemailer';
 @ApiTags('settings')
 @ApiBearerAuth()
 @Controller('settings')
-@UseGuards(JwtAuthGuard, RolesGuard)
 export class SettingsController {
   constructor(
     private readonly settingsService: SettingsService,
@@ -28,13 +28,16 @@ export class SettingsController {
   ) {}
 
   @Get()
-  @Roles('admin', 'doctor', 'secretary', 'patient', 'nurse', 'accountant', 'supervisor')
-  @ApiOperation({ summary: 'Récupérer tous les paramètres' })
-  findAll(): Promise<SettingResponseDto[]> {
-    return this.settingsService.findAll();
+  @ApiOperation({ summary: 'Récupérer tous les paramètres (public sauf sensibles)' })
+  async findAll(@Request() req: any): Promise<SettingResponseDto[]> {
+    // Si l'utilisateur est admin, on peut tout renvoyer (optionnel)
+    // Mais par défaut, on filtre les clés sensibles pour tout appel findAll
+    const isAdmin = req.user?.role === 'admin';
+    return this.settingsService.findAll(!isAdmin);
   }
 
   @Get(':key')
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin', 'doctor', 'secretary')
   @ApiOperation({ summary: 'Récupérer un paramètre par sa clé' })
   findOne(@Param('key') key: string): Promise<SettingResponseDto> {
@@ -42,6 +45,7 @@ export class SettingsController {
   }
 
   @Post('test-email')
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   @ApiOperation({ summary: 'Envoyer un email de test' })
   async testEmail(@Body() body: { to: string }): Promise<{ message: string }> {
@@ -84,6 +88,7 @@ export class SettingsController {
   }
 
   @Put(':key')
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   @ApiOperation({ summary: 'Mettre à jour un paramètre par sa clé' })
   upsert(
@@ -95,6 +100,7 @@ export class SettingsController {
   }
 
   @Post()
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   @ApiOperation({ summary: 'Créer ou mettre à jour un paramètre' })
   upsertRoot(
@@ -104,6 +110,7 @@ export class SettingsController {
   }
 
   @Delete(':key')
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   @ApiOperation({ summary: 'Supprimer un paramètre' })
   delete(@Param('key') key: string): Promise<{ message: string }> {

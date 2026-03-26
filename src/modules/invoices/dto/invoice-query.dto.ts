@@ -35,6 +35,11 @@ export class InvoiceQueryDto {
   @IsDateString()
   date_to?: string;
 
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @Type(() => Boolean)
+  today?: boolean;
+
   @IsOptional()
   @Type(() => Number)
   @IsInt()

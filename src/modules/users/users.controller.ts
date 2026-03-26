@@ -28,14 +28,15 @@ import { AddRoleDto } from './dto/add-role.dto';
 @Controller('users')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class UsersController {
-
   constructor(
     private readonly usersService: UsersService,
     private readonly permissionsService: PermissionsService,
   ) {}
 
   @Get(':id/permissions')
-  @ApiOperation({ summary: 'Récupérer toutes les permissions consolidées d\'un utilisateur' })
+  @ApiOperation({
+    summary: "Récupérer toutes les permissions consolidées d'un utilisateur",
+  })
   getUserPermissions(@Param('id') id: string) {
     return this.permissionsService.getConsolidatedUserPermissions(id);
   }
@@ -43,7 +44,6 @@ export class UsersController {
   @Get()
   @Roles('admin')
   @ApiOperation({ summary: 'Liste tous les utilisateurs (admin uniquement)' })
-
   findAll(
     @Query() query: UserQueryDto,
   ): Promise<{ data: UserResponseDto[]; meta: any }> {
@@ -53,7 +53,6 @@ export class UsersController {
   @Get(':id')
   @Roles('admin')
   @ApiOperation({ summary: "Détail d'un utilisateur (admin uniquement)" })
-
   findOne(@Param('id') id: string): Promise<UserResponseDto> {
     return this.usersService.findOne(id);
   }
@@ -61,7 +60,6 @@ export class UsersController {
   @Post()
   @Roles('admin')
   @ApiOperation({ summary: 'Créer un utilisateur (admin uniquement)' })
-
   create(@Body() createUserDto: CreateUserDto): Promise<UserResponseDto> {
     return this.usersService.create(createUserDto);
   }
@@ -69,7 +67,6 @@ export class UsersController {
   @Patch(':id')
   @Roles('admin')
   @ApiOperation({ summary: 'Modifier un utilisateur (admin uniquement)' })
-
   update(
     @Param('id') id: string,
     @Body() updateUserDto: UpdateUserDto,
@@ -81,11 +78,21 @@ export class UsersController {
   @ApiOperation({
     summary: 'Ajouter un rôle à un utilisateur (admin uniquement)',
   })
+  
   addRole(
     @Param('id') id: string,
     @Body() addRoleDto: AddRoleDto,
   ): Promise<RoleResponseDto> {
     return this.usersService.addRole(id, addRoleDto.role);
+  }
+
+  @Post(':id/reset-password')
+  @Roles('admin')
+  @ApiOperation({
+    summary: 'Renvoyer un email de réinitialisation de mot de passe',
+  })
+  async resetPassword(@Param('id') id: string) {
+    return this.usersService.resetPassword(id);
   }
 
   @Delete(':id/roles/:role')
@@ -106,7 +113,9 @@ export class UsersController {
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Supprimer définitivement un utilisateur (admin uniquement)' })
+  @ApiOperation({
+    summary: 'Supprimer définitivement un utilisateur (admin uniquement)',
+  })
   remove(@Param('id') id: string): Promise<{ message: string }> {
     return this.usersService.remove(id);
   }

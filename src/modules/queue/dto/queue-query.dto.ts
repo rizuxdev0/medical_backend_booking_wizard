@@ -12,6 +12,7 @@ export class QueueQueryDto {
       'completed',
       'cancelled',
       'no_show',
+      'active',
     ],
   })
   @IsOptional()
@@ -22,6 +23,7 @@ export class QueueQueryDto {
     'completed',
     'cancelled',
     'no_show',
+    'active',
   ])
   status?: string;
 

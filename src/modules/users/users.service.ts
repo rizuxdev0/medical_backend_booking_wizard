@@ -39,7 +39,7 @@ export class UsersService implements OnModuleInit {
       console.log('--- EXECUTING DB SCHEMA FIX FOR app_role ENUM ---');
       const queryRunner = this.dataSource.createQueryRunner();
       await queryRunner.connect();
-      
+
       // On convertit les colonnes en varchar manuellement pour débloquer TypeORM
       await queryRunner.query(`
         DO $$ 
@@ -86,11 +86,13 @@ export class UsersService implements OnModuleInit {
         END $$;
       `);
 
-      
       await queryRunner.release();
       console.log('--- DB SCHEMA FIX COMPLETED ---');
     } catch (error) {
-      console.warn('--- DB SCHEMA FIX FAILED (Potentially already fixed) ---', error.message);
+      console.warn(
+        '--- DB SCHEMA FIX FAILED (Potentially already fixed) ---',
+        error.message,
+      );
     }
 
     // S'assurer que l'admin par défaut existe avec le bon mot de passe
@@ -106,16 +108,28 @@ export class UsersService implements OnModuleInit {
       await this.createDefaultAdmin(passwordHash);
     } else {
       console.log(`--- UPDATING ADMIN PASSWORD AND ROLES: ${adminEmail} ---`);
-      await this.profileRepo.update(admin.id, { 
+      await this.profileRepo.update(admin.id, {
         password_hash: passwordHash,
         is_active: true,
       });
-      
-      const adminRoleNames = ['admin', 'doctor', 'secretary', 'patient', 'nurse', 'accountant', 'supervisor'];
+
+      const adminRoleNames = [
+        'admin',
+        'doctor',
+        'secretary',
+        'patient',
+        'nurse',
+        'accountant',
+        'supervisor',
+      ];
       for (const roleName of adminRoleNames) {
-        const existing = await this.roleRepo.findOne({ where: { user_id: admin.id, role: roleName as any } });
+        const existing = await this.roleRepo.findOne({
+          where: { user_id: admin.id, role: roleName as any },
+        });
         if (!existing) {
-          await this.roleRepo.save(this.roleRepo.create({ user_id: admin.id, role: roleName as any }));
+          await this.roleRepo.save(
+            this.roleRepo.create({ user_id: admin.id, role: roleName as any }),
+          );
         }
       }
 
@@ -137,33 +151,38 @@ export class UsersService implements OnModuleInit {
       // S'assurer que le patient de test existe
       const patientEmail = 'patient@gmail.com';
       const patientHash = await bcrypt.hash('Patient123!', 10);
-      let patient = await this.profileRepo.findOne({ where: { email: patientEmail } });
-      
+      let patient = await this.profileRepo.findOne({
+        where: { email: patientEmail },
+      });
+
       if (!patient) {
         console.log(`--- SEEDING TEST PATIENT: ${patientEmail} ---`);
-        patient = await this.profileRepo.save(this.profileRepo.create({
-          email: patientEmail,
-          password_hash: patientHash,
-          first_name: 'Jean',
-          last_name: 'Patient',
-          is_active: true,
-        }));
+        patient = await this.profileRepo.save(
+          this.profileRepo.create({
+            email: patientEmail,
+            password_hash: patientHash,
+            first_name: 'Jean',
+            last_name: 'Patient',
+            is_active: true,
+          }),
+        );
       } else {
-        await this.profileRepo.update(patient.id, { 
+        await this.profileRepo.update(patient.id, {
           password_hash: patientHash,
           is_active: true,
         });
       }
 
-      const pRole = await this.roleRepo.findOne({ where: { user_id: patient.id, role: 'patient' as any } });
+      const pRole = await this.roleRepo.findOne({
+        where: { user_id: patient.id, role: 'patient' as any },
+      });
       if (!pRole) {
-        await this.roleRepo.save(this.roleRepo.create({ user_id: patient.id, role: 'patient' as any }));
+        await this.roleRepo.save(
+          this.roleRepo.create({ user_id: patient.id, role: 'patient' as any }),
+        );
       }
     }
-
   }
-
-
 
   async findAll(
     query: UserQueryDto,
@@ -252,8 +271,7 @@ export class UsersService implements OnModuleInit {
     if (createUserDto.job_title) userData.job_title = createUserDto.job_title;
     if (createUserDto.employee_id)
       userData.employee_id = createUserDto.employee_id;
-    if (createUserDto.notes !== undefined)
-      userData.notes = createUserDto.notes;
+    if (createUserDto.notes !== undefined) userData.notes = createUserDto.notes;
     if (createUserDto.is_active !== undefined)
       userData.is_active = createUserDto.is_active;
 
@@ -287,9 +305,18 @@ export class UsersService implements OnModuleInit {
 
     // Créer une invitation si l'utilisateur n'est pas déjà actif (ex: créé par admin)
     // Sauf si c'est un patient (qui s'inscrit lui-même typiquement, mais ici c'est admin-driven)
-    const invitation = await this.invitationsService.createInvitation(user.email, user.id, sendEmail);
+    const invitation = await this.invitationsService.createInvitation(
+      user.email,
+      user.id,
+      sendEmail,
+    );
 
-    return this.mapToUserResponse(user, roles, invitation.tempPassword, invitation.otpCode);
+    return this.mapToUserResponse(
+      user,
+      roles,
+      invitation.tempPassword,
+      invitation.otpCode,
+    );
   }
 
   async update(
@@ -345,14 +372,14 @@ export class UsersService implements OnModuleInit {
     if (updateUserDto.roles) {
       // Supprimer les rôles existants
       await this.roleRepo.delete({ user_id: id });
-      
+
       // Ajouter les nouveaux rôles
       if (updateUserDto.roles.length > 0) {
-        const newRoles = updateUserDto.roles.map(role => 
+        const newRoles = updateUserDto.roles.map((role) =>
           this.roleRepo.create({
             user_id: id,
-            role: role as any
-          })
+            role: role as any,
+          }),
         );
         await this.roleRepo.save(newRoles);
       }
@@ -370,6 +397,26 @@ export class UsersService implements OnModuleInit {
     });
 
     return this.mapToUserResponse(updatedUser, roles);
+  }
+
+  async resetPassword(
+    userId: string,
+  ): Promise<{ success: boolean; message: string }> {
+    // 1. Trouver l'utilisateur avec profileRepo (pas usersRepository)
+    const user = await this.profileRepo.findOne({ where: { id: userId } });
+    if (!user) throw new NotFoundException('Utilisateur introuvable');
+
+    // 2. Réutiliser le système d'invitation existant pour générer un nouveau mot de passe
+    const invitation = await this.invitationsService.createInvitation(
+      user.email,
+      user.id,
+      true, // sendEmail = true → envoie l'email automatiquement
+    );
+
+    return {
+      success: true,
+      message: `Email de réinitialisation envoyé à ${user.email}`,
+    };
   }
 
   async addRole(id: string, roleName: string): Promise<RoleResponseDto> {
@@ -481,24 +528,35 @@ export class UsersService implements OnModuleInit {
     }
 
     // Ajouter TOUS les rôles administratifs pour un nouveau "Super Admin"
-    const adminRoleNames = ['admin', 'doctor', 'secretary', 'patient', 'nurse', 'accountant', 'supervisor'];
-    
+    const adminRoleNames = [
+      'admin',
+      'doctor',
+      'secretary',
+      'patient',
+      'nurse',
+      'accountant',
+      'supervisor',
+    ];
+
     for (const roleName of adminRoleNames) {
-      const exists = await this.roleRepo.findOne({ where: { user_id: userId, role: roleName as any } });
+      const exists = await this.roleRepo.findOne({
+        where: { user_id: userId, role: roleName as any },
+      });
       if (!exists) {
-        await this.roleRepo.save(this.roleRepo.create({
-          user_id: userId,
-          role: roleName as any,
-        }));
+        await this.roleRepo.save(
+          this.roleRepo.create({
+            user_id: userId,
+            role: roleName as any,
+          }),
+        );
       }
     }
 
     return true;
   }
 
-
   async createDefaultAdmin(forcedHash?: string): Promise<UserResponseDto> {
-    const passwordHash = forcedHash || await bcrypt.hash('Eric123456!', 12);
+    const passwordHash = forcedHash || (await bcrypt.hash('Eric123456!', 12));
 
     const admin = this.profileRepo.create({
       email: 'eric@gmail.com',
@@ -510,7 +568,15 @@ export class UsersService implements OnModuleInit {
 
     await this.profileRepo.save(admin);
 
-    const adminRoleNames = ['admin', 'doctor', 'secretary', 'patient', 'nurse', 'accountant', 'supervisor'];
+    const adminRoleNames = [
+      'admin',
+      'doctor',
+      'secretary',
+      'patient',
+      'nurse',
+      'accountant',
+      'supervisor',
+    ];
     const roles: UserRole[] = [];
 
     for (const roleName of adminRoleNames) {
@@ -522,7 +588,9 @@ export class UsersService implements OnModuleInit {
       roles.push(role);
     }
 
-    console.log(`ADMIN CREATED: eric@gmail.com / Eric123456! with roles: ${adminRoleNames.join(', ')}`);
+    console.log(
+      `ADMIN CREATED: eric@gmail.com / Eric123456! with roles: ${adminRoleNames.join(', ')}`,
+    );
     return this.mapToUserResponse(admin, roles);
   }
 
@@ -549,7 +617,12 @@ export class UsersService implements OnModuleInit {
     return rest;
   }
 
-  private mapToUserResponse(user: Profile, roles: UserRole[], tempPassword?: string, otpCode?: string): UserResponseDto {
+  private mapToUserResponse(
+    user: Profile,
+    roles: UserRole[],
+    tempPassword?: string,
+    otpCode?: string,
+  ): UserResponseDto {
     const sanitizedUser = this.sanitizeUser(user);
     return {
       ...sanitizedUser,

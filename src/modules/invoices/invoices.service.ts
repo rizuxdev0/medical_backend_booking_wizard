@@ -72,7 +72,13 @@ export class InvoicesService {
       whereCondition.practitionerId = practitioner_id;
     }
 
-    if (date_from || date_to) {
+    if (query.today) {
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date();
+      endOfDay.setHours(23, 59, 59, 999);
+      whereCondition.issueDate = Between(startOfDay, endOfDay);
+    } else if (date_from || date_to) {
       whereCondition.issueDate = Between(
         date_from ? new Date(date_from) : new Date('1900-01-01'),
         date_to ? new Date(date_to) : new Date('2100-12-31'),

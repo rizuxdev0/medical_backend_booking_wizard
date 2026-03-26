@@ -1,24 +1,13 @@
-import { IsEnum } from 'class-validator';
+import { IsString, IsOptional } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { QueueStatus } from '../entities/queue-entry.entity';
 
 export class UpdateQueueStatusDto {
   @ApiProperty({
-    enum: [
-      'waiting',
-      'called',
-      'in_progress',
-      'completed',
-      'cancelled',
-      'no_show',
-    ],
+    enum: QueueStatus,
+    required: false,
   })
-  @IsEnum([
-    'waiting',
-    'called',
-    'in_progress',
-    'completed',
-    'cancelled',
-    'no_show',
-  ])
-  status: string;
+  @IsString()
+  @IsOptional()
+  status?: QueueStatus;
 }
