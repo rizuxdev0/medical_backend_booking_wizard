@@ -45,6 +45,13 @@ export class AppointmentsController {
     return this.appointmentsService.findOne(id);
   }
 
+  @Get('my/list')
+  @Roles('patient')
+  @ApiOperation({ summary: 'Liste mes rendez-vous (en tant que patient)' })
+  findMy(@CurrentUser() user): Promise<AppointmentResponseDto[]> {
+    return this.appointmentsService.findByUser(user.id);
+  }
+
   @Post()
   @Roles('admin', 'doctor', 'secretary')
   @ApiOperation({ summary: 'Créer un nouveau rendez-vous' })

@@ -64,6 +64,16 @@ export class InvoicesController {
     return this.invoicesService.getStats();
   }
 
+  @Patch(':id/status')
+  @Roles('admin', 'accountant', 'secretary')
+  @ApiOperation({ summary: 'Mettre à jour le statut d\'une facture' })
+  updateStatus(
+    @Param('id') id: string,
+    @Body('status') status: string,
+  ): Promise<InvoiceResponseDto> {
+    return this.invoicesService.updateStatus(id, status);
+  }
+
   @Get(':id')
   @Roles('admin', 'accountant', 'secretary', 'doctor')
   @ApiOperation({ summary: "Détail d'une facture" })

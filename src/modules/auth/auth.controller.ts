@@ -43,4 +43,12 @@ export class AuthController {
   logout() {
     return { message: 'Déconnecté' };
   }
+
+  @Post('verify-password')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  async verifyPassword(@Request() req, @Body('password') password: string) {
+    const isValid = await this.authService.verifyPassword(req.user.id, password);
+    return { isValid };
+  }
 }

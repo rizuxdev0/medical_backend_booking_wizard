@@ -1,7 +1,8 @@
-import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
@@ -14,6 +15,7 @@ import {
 } from 'typeorm';
 import { Appointment } from './entities/appointment.entity';
 import { AppointmentType } from './entities/appointment-type.entity';
+import { CreateAppointmentTypeDto } from './dto/create-appointment-type.dto';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
 import { UpdateAppointmentDto } from './dto/update-appointment.dto';
 import { UpdateStatusDto } from './dto/update-status.dto';
@@ -25,6 +27,8 @@ import { Practitioner } from '../practitioners/entities/practitioner.entity';
 import { PractitionerSchedule } from '../practitioners/entities/practitioner-schedule.entity';
 import { PractitionerAbsence } from '../practitioners/entities/practitioner-absence.entity';
 import { Resource } from '../resources/entities/resource.entity';
+import { Profile } from '../users/entities/profile.entity';
+import { NotificationsService } from '../notifications/notifications.service';
 
 type AppointmentStatus =
   | 'pending'
@@ -50,6 +54,10 @@ export class AppointmentsService {
     private absenceRepo: Repository<PractitionerAbsence>,
     @InjectRepository(Resource)
     private resourceRepo: Repository<Resource>,
+    @InjectRepository(Profile)
+    private profileRepo: Repository<Profile>,
+    @Inject(forwardRef(() => NotificationsService))
+    private notificationService: NotificationsService,
   ) {}
 
   // ==================== LISTE AVEC FILTRES ====================
@@ -112,6 +120,16 @@ export class AppointmentsService {
       color: t.color,
       duration_minutes: t.durationMinutes,
     }));
+  }
+
+  async createAppointmentType(dto: CreateAppointmentTypeDto): Promise<any> {
+    const type = this.appointmentTypeRepo.create({
+      name: dto.name,
+      description: dto.description,
+      durationMinutes: dto.duration_minutes,
+      color: dto.color,
+    });
+    return this.appointmentTypeRepo.save(type);
   }
 
   // ==================== DÉTAIL ====================
@@ -226,8 +244,23 @@ export class AppointmentsService {
     // 8. Logger l'activité (sera implémenté dans la phase 11)
     // this.activityLogService.log('create', 'appointment', appointment.id, null, appointment, createdBy);
 
-    // 9. Créer une notification (sera implémenté dans la phase 11)
-    // this.notificationService.create(appointment.id, 'confirmation', appointment.scheduledAt);
+    // 9. Créer une notification
+    try {
+      await this.notificationService.createLog({
+        user_id: createdBy,
+        patient_id: createAppointmentDto.patient_id,
+        type: 'appointment_created',
+        title: 'Nouveau rendez-vous',
+        message: `Votre rendez-vous du ${new Date(createAppointmentDto.scheduled_at).toLocaleString('fr-FR')} est confirmé.`,
+        data: {
+          appointment_id: appointment.id,
+          entity_type: 'appointment',
+          entity_id: appointment.id
+        }
+      });
+    } catch (e) {
+      console.error('Failed to create notification', e);
+    }
 
     // 10. Récupérer le rendez-vous avec ses relations
     const savedAppointment = await this.appointmentRepo.findOne({
@@ -370,13 +403,13 @@ export class AppointmentsService {
     const oldStatus = appointment.status;
     const newStatus = updateStatusDto.status as AppointmentStatus;
 
-    // Vérifier les transitions valides
-    const validTransitions: Record<AppointmentStatus, AppointmentStatus[]> = {
-      pending: ['confirmed', 'cancelled'],
-      confirmed: ['completed', 'cancelled', 'no_show'],
-      completed: [],
-      cancelled: [],
-      no_show: [],
+    // Vérifier les transitions valides (Assouplies pour la flexibilité)
+    const validTransitions: Record<string, string[]> = {
+      pending: ['confirmed', 'completed', 'cancelled', 'no_show'],
+      confirmed: ['pending', 'completed', 'cancelled', 'no_show'],
+      completed: ['pending', 'confirmed', 'cancelled', 'no_show'],
+      cancelled: ['pending', 'confirmed', 'completed', 'no_show'],
+      no_show: ['pending', 'confirmed', 'completed', 'cancelled'],
     };
 
     if (!validTransitions[oldStatus]?.includes(newStatus)) {
@@ -583,6 +616,21 @@ export class AppointmentsService {
         "Conflit d'horaire avec un autre rendez-vous",
       );
     }
+  }
+
+  async findByUser(userId: string): Promise<AppointmentResponseDto[]> {
+    const profile = await this.profileRepo.findOne({ where: { id: userId } });
+    if (!profile || !profile.patient_id) {
+      return [];
+    }
+
+    const appointments = await this.appointmentRepo.find({
+      where: { patientId: profile.patient_id },
+      relations: ['patient', 'practitioner', 'appointmentType', 'resource'],
+      order: { scheduledAt: 'DESC' },
+    });
+
+    return appointments.map((apt) => this.mapToResponse(apt));
   }
 
   private mapToResponse(appointment: Appointment): AppointmentResponseDto {

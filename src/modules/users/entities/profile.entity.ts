@@ -115,6 +115,9 @@ export class Profile {
   @UpdateDateColumn({ name: 'updated_at' })
   updated_at: Date;
 
+  @Column({ name: 'patient_id', type: 'uuid', nullable: true })
+  patient_id: string;
+
   @OneToMany(() => UserRole, (role) => role.user)
   roles: UserRole[];
 }

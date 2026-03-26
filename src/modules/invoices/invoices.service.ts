@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between, Like } from 'typeorm';
+import { Repository, Between, In, LessThanOrEqual, Like } from 'typeorm';
 
 import { CreateInvoiceDto } from './dto/create-invoice.dto';
 import { UpdateInvoiceDto } from './dto/update-invoice.dto';
@@ -365,6 +365,17 @@ export class InvoicesService {
     return this.findOne(id);
   }
 
+  async updateStatus(
+    id: string,
+    status: string,
+  ): Promise<InvoiceResponseDto> {
+    const invoice = await this.invoiceRepo.findOne({ where: { id } });
+    if (!invoice) throw new NotFoundException('Facture non trouvée');
+
+    await this.invoiceRepo.update(id, { status });
+    return this.findOne(id);
+  }
+
   // ==================== GESTION DES PAIEMENTS ====================
 
   async addPayment(
@@ -416,8 +427,8 @@ export class InvoicesService {
     await this.paymentRepo.save(payment);
 
     // Mettre à jour la facture
-    const newAmountPaid = invoice.amountPaid + createPaymentDto.amount;
-    const newAmountDue = invoice.totalAmount - newAmountPaid;
+    const newAmountPaid = Number(invoice.amountPaid || 0) + Number(createPaymentDto.amount);
+    const newAmountDue = Math.max(0, Number(invoice.totalAmount || 0) - newAmountPaid);
 
     let newStatus = invoice.status;
     if (newAmountDue <= 0) {
@@ -432,45 +443,37 @@ export class InvoicesService {
       status: newStatus,
     });
 
-    // Si c'est un paiement pour une échéance, mettre à jour l'échéance
+    // Si c'est un paiement pour une échéance (deferred), mettre à jour les échéances dans l'ordre
     if (invoice.isDeferred) {
       const installments = await this.installmentRepo.find({
-        where: { invoiceId, status: 'pending' },
+        where: { 
+          invoiceId, 
+          status: In(['pending', 'partial']) 
+        },
         order: { dueDate: 'ASC' },
       });
 
-      let remainingAmount = createPaymentDto.amount;
+      let remainingAmount = Number(createPaymentDto.amount);
       for (const installment of installments) {
         if (remainingAmount <= 0) break;
 
-        const installmentDue = installment.amount - installment.paidAmount;
-        if (installmentDue > 0) {
-          const paymentForInstallment = Math.min(
-            remainingAmount,
-            installmentDue,
-          );
+        const inst_amount = Number(installment.amount || 0);
+        const inst_paid = Number(installment.paidAmount || 0);
+        const inst_due = Math.max(0, inst_amount - inst_paid);
+        
+        if (inst_due > 0) {
+          const paymentForThis = Math.min(remainingAmount, inst_due);
+          const newPaidAmount = inst_paid + paymentForThis;
+          const status = newPaidAmount >= inst_amount - 0.01 ? 'paid' : 'partial';
 
-          const installmentUpdateData: Partial<InvoiceInstallment> = {
-            paidAmount: installment.paidAmount + paymentForInstallment,
+          await this.installmentRepo.update(installment.id, {
+            paidAmount: newPaidAmount,
+            status: status,
             paidAt: new Date(),
             paymentId: payment.id,
-          };
+          });
 
-          if (
-            installment.paidAmount + paymentForInstallment >=
-            installment.amount
-          ) {
-            installmentUpdateData.status = 'paid';
-          } else {
-            installmentUpdateData.status = 'partial';
-          }
-
-          await this.installmentRepo.update(
-            installment.id,
-            installmentUpdateData,
-          );
-
-          remainingAmount -= paymentForInstallment;
+          remainingAmount = Math.max(0, remainingAmount - paymentForThis);
         }
       }
     }
@@ -492,7 +495,7 @@ export class InvoicesService {
 
   async getUnpaidInvoices(): Promise<InvoiceResponseDto[]> {
     const invoices = await this.invoiceRepo.find({
-      where: [{ status: 'sent' }, { status: 'partial' }, { status: 'overdue' }],
+      where: [{ status: 'issued' }, { status: 'sent' }, { status: 'partial' }, { status: 'overdue' }],
       order: { dueDate: 'ASC' },
       relations: ['patient'],
     });
@@ -508,7 +511,7 @@ export class InvoicesService {
     const allInvoices = await this.invoiceRepo.find();
     const paidInvoices = allInvoices.filter((inv) => inv.status === 'paid');
     const unpaidInvoices = allInvoices.filter((inv) =>
-      ['sent', 'partial', 'overdue'].includes(inv.status),
+      ['issued', 'sent', 'partial', 'overdue'].includes(inv.status),
     );
     const overdueInvoices = allInvoices.filter(
       (inv) =>
@@ -534,7 +537,7 @@ export class InvoicesService {
 
     const byStatus = {
       draft: allInvoices.filter((inv) => inv.status === 'draft').length,
-      sent: allInvoices.filter((inv) => inv.status === 'sent').length,
+      sent: allInvoices.filter((inv) => ['issued', 'sent'].includes(inv.status)).length,
       paid: allInvoices.filter((inv) => inv.status === 'paid').length,
       partial: allInvoices.filter((inv) => inv.status === 'partial').length,
       overdue: overdueInvoices.length,

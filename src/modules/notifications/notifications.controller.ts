@@ -68,9 +68,14 @@ export class NotificationsController {
     @Query() query: NotificationQueryDto,
     @CurrentUser() user,
   ): Promise<NotificationLogResponseDto[]> {
+    // Sécurité: vérifier si user et roles existent
+    if (!user || !user.roles) {
+      return this.notificationsService.findAllLogs(query);
+    }
+
     // Si l'utilisateur est un patient, filtrer automatiquement
     if (user.roles.includes('patient')) {
-      query.patient_id = user.patientId; // À adapter selon votre logique
+      query.patient_id = user.patient_id || user.patientId; 
     }
     if (user.roles.includes('doctor') || user.roles.includes('secretary')) {
       query.user_id = user.id;
@@ -81,11 +86,12 @@ export class NotificationsController {
   @Get('unread/count')
   @ApiOperation({ summary: 'Nombre de notifications non lues' })
   async getUnreadCount(@CurrentUser() user): Promise<{ count: number }> {
+    if (!user || !user.roles) return { count: 0 };
     // Adapter selon le rôle
     if (user.roles.includes('patient')) {
       return this.notificationsService.getUnreadCount(
         undefined,
-        user.patientId,
+        user.patient_id || user.patientId,
       );
     }
     return this.notificationsService.getUnreadCount(user.id);
@@ -100,8 +106,9 @@ export class NotificationsController {
   @Post('read-all')
   @ApiOperation({ summary: 'Marquer toutes les notifications comme lues' })
   async markAllAsRead(@CurrentUser() user): Promise<{ message: string }> {
+    if (!user || !user.roles) return { message: 'Aucun utilisateur authentifié' };
     if (user.roles.includes('patient')) {
-      return this.notificationsService.markAllAsRead(undefined, user.patientId);
+      return this.notificationsService.markAllAsRead(undefined, user.patient_id || user.patientId);
     }
     return this.notificationsService.markAllAsRead(user.id);
   }
@@ -116,8 +123,9 @@ export class NotificationsController {
   @Delete('all/clear')
   @ApiOperation({ summary: 'Supprimer TOUTES les notifications' })
   async clearAll(@CurrentUser() user): Promise<{ message: string }> {
+    if (!user || !user.roles) return { message: 'Utilisateur non trouvé' };
     if (user.roles.includes('patient')) {
-      await this.notificationsService.clearAll(undefined, user.patientId);
+      await this.notificationsService.clearAll(undefined, user.patient_id || user.patientId);
     } else {
       await this.notificationsService.clearAll(user.id);
     }

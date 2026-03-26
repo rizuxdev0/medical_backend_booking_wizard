@@ -1,6 +1,7 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import { Controller, Get, Post, Body, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiBody } from '@nestjs/swagger';
 import { AppointmentsService } from './appointments.service';
+import { CreateAppointmentTypeDto } from './dto/create-appointment-type.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -17,5 +18,13 @@ export class AppointmentTypesController {
   @ApiOperation({ summary: 'Liste tous les types de rendez-vous actifs' })
   findAll() {
     return this.appointmentsService.findAllAppointmentTypes();
+  }
+
+  @Post()
+  @Roles('admin', 'doctor')
+  @ApiOperation({ summary: 'Crée un nouveau type de rendez-vous' })
+  @ApiBody({ type: CreateAppointmentTypeDto })
+  create(@Body() createDto: CreateAppointmentTypeDto) {
+    return this.appointmentsService.createAppointmentType(createDto);
   }
 }

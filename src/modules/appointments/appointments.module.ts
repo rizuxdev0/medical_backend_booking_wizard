@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppointmentsService } from './appointments.service';
 import { AppointmentsController } from './appointments.controller';
@@ -11,7 +11,9 @@ import { Practitioner } from '../practitioners/entities/practitioner.entity';
 import { PractitionerSchedule } from '../practitioners/entities/practitioner-schedule.entity';
 import { PractitionerAbsence } from '../practitioners/entities/practitioner-absence.entity';
 import { Resource } from '../resources/entities/resource.entity';
+import { Profile } from '../users/entities/profile.entity';
 import { ResourcesModule } from '../resources/resources.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
@@ -24,8 +26,10 @@ import { ResourcesModule } from '../resources/resources.module';
       PractitionerSchedule,
       PractitionerAbsence,
       Resource,
+      Profile,
     ]),
     ResourcesModule,
+    forwardRef(() => NotificationsModule),
   ],
   controllers: [AppointmentsController, AppointmentTypesController],
   providers: [AppointmentsService],

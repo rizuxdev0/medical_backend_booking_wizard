@@ -115,6 +115,7 @@ import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { Profile } from '../users/entities/profile.entity';
 import { UserRole } from '../users/entities/user-role.entity';
+import { Patient } from '../patients/entities/patient.entity';
 
 @Injectable()
 export class AuthService {
@@ -123,6 +124,8 @@ export class AuthService {
     private profileRepo: Repository<Profile>,
     @InjectRepository(UserRole)
     private roleRepo: Repository<UserRole>,
+    @InjectRepository(Patient)
+    private patientRepo: Repository<Patient>,
     private jwtService: JwtService,
   ) {}
 
@@ -204,6 +207,18 @@ export class AuthService {
 
     await this.roleRepo.save(role);
 
+    // Create a corresponding patient record if role is 'patient'
+    const patientRecord = this.patientRepo.create({
+      firstName: firstName || 'Patient',
+      lastName: lastName || 'New',
+      email: email,
+      userId: user.id,
+    });
+    const savedPatient = await this.patientRepo.save(patientRecord);
+
+    // Link the patient ID to the profile
+    await this.profileRepo.update(user.id, { patient_id: savedPatient.id });
+
     const token = this.jwtService.sign({
       sub: user.id,
       email: user.email,
@@ -243,6 +258,12 @@ export class AuthService {
         role: r.role,
       })),
     };
+  }
+
+  async verifyPassword(userId: string, password: string): Promise<boolean> {
+    const user = await this.profileRepo.findOne({ where: { id: userId } });
+    if (!user) return false;
+    return bcrypt.compare(password, user.password_hash);
   }
 
   private sanitizeUser(user: Profile) {

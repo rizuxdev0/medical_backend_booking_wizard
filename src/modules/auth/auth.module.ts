@@ -8,10 +8,11 @@ import { AuthController } from './auth.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { Profile } from '../users/entities/profile.entity';
 import { UserRole } from '../users/entities/user-role.entity';
+import { Patient } from '../patients/entities/patient.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Profile, UserRole]),
+    TypeOrmModule.forFeature([Profile, UserRole, Patient]),
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       inject: [ConfigService],
