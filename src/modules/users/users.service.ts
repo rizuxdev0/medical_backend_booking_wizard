@@ -77,6 +77,11 @@ export class UsersService implements OnModuleInit {
             ALTER TABLE "notifications" ALTER COLUMN "type" TYPE character varying(50);
           EXCEPTION WHEN OTHERS THEN RAISE NOTICE 'notifications.type already varchar'; END;
           
+          -- Fix profiles
+          BEGIN
+            ALTER TABLE "profiles" ADD COLUMN IF NOT EXISTS "patient_id" uuid;
+          EXCEPTION WHEN OTHERS THEN RAISE NOTICE 'profiles.patient_id already exists'; END;
+          
           -- Drop problematic types
           BEGIN DROP TYPE IF EXISTS "public"."app_role" CASCADE; EXCEPTION WHEN OTHERS THEN END;
           BEGIN DROP TYPE IF EXISTS "public"."resource_type" CASCADE; EXCEPTION WHEN OTHERS THEN END;

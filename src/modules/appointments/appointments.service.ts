@@ -1,3 +1,4 @@
+import {
   Injectable,
   NotFoundException,
   BadRequestException,
@@ -130,6 +131,42 @@ export class AppointmentsService {
       color: dto.color,
     });
     return this.appointmentTypeRepo.save(type);
+  }
+
+  async updateAppointmentType(id: string, dto: any): Promise<any> {
+    const type = await this.appointmentTypeRepo.findOne({ where: { id } });
+    if (!type) {
+      throw new NotFoundException(`Type de rendez-vous non trouvé`);
+    }
+
+    if (dto.name !== undefined) type.name = dto.name;
+    if (dto.description !== undefined) type.description = dto.description;
+    if (dto.duration_minutes !== undefined) type.durationMinutes = dto.duration_minutes;
+    if (dto.color !== undefined) type.color = dto.color;
+
+    return this.appointmentTypeRepo.save(type);
+  }
+
+  async deleteAppointmentType(id: string): Promise<{ message: string }> {
+    const type = await this.appointmentTypeRepo.findOne({ where: { id } });
+    if (!type) {
+      throw new NotFoundException(`Type de rendez-vous non trouvé`);
+    }
+    
+    // Check if there are appointments using this type
+    const count = await this.appointmentRepo.count({
+      where: { appointmentTypeId: id, status: Not(In(['cancelled', 'completed'])) }
+    });
+
+    if (count > 0) {
+      throw new BadRequestException('Impossible de supprimer ce type de rendez-vous car il est utilisé par des rendez-vous actifs');
+    }
+
+    // Soft delete if possible, otherwise hard delete
+    type.isActive = false;
+    await this.appointmentTypeRepo.save(type);
+    
+    return { message: 'Type de rendez-vous supprimé avec succès' };
   }
 
   // ==================== DÉTAIL ====================

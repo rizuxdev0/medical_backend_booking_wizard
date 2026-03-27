@@ -16,6 +16,7 @@ export class UserResponseDto {
   created_at: Date;
   updated_at: Date;
   roles: RoleResponseDto[];
+  patient_id?: string | null;
   temp_password?: string;
   otp_code?: string;
 }

@@ -50,6 +50,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       id: user.id,
       email: user.email,
       roles: roles.map((r) => r.role),
+      patient_id: user.patient_id,
     };
   }
 }

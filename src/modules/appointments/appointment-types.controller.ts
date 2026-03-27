@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiBody } from '@nestjs/swagger';
 import { AppointmentsService } from './appointments.service';
 import { CreateAppointmentTypeDto } from './dto/create-appointment-type.dto';
@@ -26,5 +26,19 @@ export class AppointmentTypesController {
   @ApiBody({ type: CreateAppointmentTypeDto })
   create(@Body() createDto: CreateAppointmentTypeDto) {
     return this.appointmentsService.createAppointmentType(createDto);
+  }
+
+  @Patch(':id')
+  @Roles('admin', 'doctor')
+  @ApiOperation({ summary: 'Modifie un type de rendez-vous' })
+  update(@Param('id') id: string, @Body() updateDto: any) {
+    return this.appointmentsService.updateAppointmentType(id, updateDto);
+  }
+
+  @Delete(':id')
+  @Roles('admin', 'doctor')
+  @ApiOperation({ summary: 'Supprime un type de rendez-vous (désactivation douce)' })
+  remove(@Param('id') id: string) {
+    return this.appointmentsService.deleteAppointmentType(id);
   }
 }

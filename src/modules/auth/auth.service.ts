@@ -262,8 +262,13 @@ export class AuthService {
 
   async verifyPassword(userId: string, password: string): Promise<boolean> {
     const user = await this.profileRepo.findOne({ where: { id: userId } });
-    if (!user) return false;
-    return bcrypt.compare(password, user.password_hash);
+    if (!user) {
+      console.warn(`[AUTH] verifyPassword: User ${userId} not found`);
+      return false;
+    }
+    const isValid = await bcrypt.compare(password, user.password_hash);
+    console.log(`[AUTH] verifyPassword for ${user.email}: ${isValid}`);
+    return isValid;
   }
 
   private sanitizeUser(user: Profile) {
