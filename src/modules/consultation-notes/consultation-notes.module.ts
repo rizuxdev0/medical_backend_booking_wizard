@@ -6,6 +6,7 @@ import { ConsultationNote } from '../appointments/entities/consultation-note.ent
 import { Appointment } from '../appointments/entities/appointment.entity';
 import { Practitioner } from '../practitioners/entities/practitioner.entity';
 import { Patient } from '../patients/entities/patient.entity';
+import { SettingsModule } from '../settings/settings.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { Patient } from '../patients/entities/patient.entity';
       Practitioner,
       Patient,
     ]),
+    SettingsModule,
   ],
   controllers: [ConsultationNotesController],
   providers: [ConsultationNotesService],

@@ -3,6 +3,7 @@ import {
   Post,
   Body,
   Get,
+  Patch,
   UseGuards,
   Request,
 } from '@nestjs/common';
@@ -50,5 +51,40 @@ export class AuthController {
   async verifyPassword(@Request() req, @Body('password') password: string) {
     const isValid = await this.authService.verifyPassword(req.user.id, password);
     return { isValid };
+  }
+
+  @Patch('update-profile')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  updateProfile(@Request() req, @Body() data: { first_name?: string; last_name?: string; phone?: string }) {
+    return this.authService.updateProfile(req.user.id, data);
+  }
+
+  @Post('change-password')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  changePassword(@Request() req, @Body() data: { current: string; new: string }) {
+    return this.authService.changePassword(req.user.id, data);
+  }
+
+  @Post('2fa/generate')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  generateTwoFactorAuth(@Request() req) {
+    return this.authService.generateTwoFactorSecret(req.user.id);
+  }
+
+  @Post('2fa/turn-on')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  turnOnTwoFactorAuth(@Request() req, @Body('code') code: string) {
+    return this.authService.turnOnTwoFactorAuth(req.user.id, code);
+  }
+
+  @Post('2fa/turn-off')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  turnOffTwoFactorAuth(@Request() req, @Body('code') code: string) {
+    return this.authService.turnOffTwoFactorAuth(req.user.id, code);
   }
 }

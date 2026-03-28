@@ -9,6 +9,7 @@ import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { Profile } from './entities/profile.entity';
 import { UserRole } from './entities/user-role.entity';
+import { Patient } from '../patients/entities/patient.entity';
 import { InvitationsService } from '../invitations/invitations.service';
 import { forwardRef, Inject } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -27,6 +28,8 @@ export class UsersService implements OnModuleInit {
     private profileRepo: Repository<Profile>,
     @InjectRepository(UserRole)
     private roleRepo: Repository<UserRole>,
+    @InjectRepository(Patient)
+    private patientRepo: Repository<Patient>,
     @Inject(forwardRef(() => InvitationsService))
     private invitationsService: InvitationsService,
     private settingsService: SettingsService,
@@ -299,13 +302,40 @@ export class UsersService implements OnModuleInit {
       roles.push(role);
     }
 
+    // Créer un dossier patient si demandé
+    if (createUserDto.create_patient_record && rolesToAdd.includes('patient')) {
+      try {
+        const patientRecord = this.patientRepo.create({
+          firstName: createUserDto.first_name || 'Patient',
+          lastName: createUserDto.last_name || 'Nouveau',
+          email: user.email,
+          phone: createUserDto.phone,
+          userId: user.id,
+        });
+        const savedPatient = await this.patientRepo.save(patientRecord);
+
+        // Lier le patientId au profil
+        await this.profileRepo.update(user.id, { patient_id: savedPatient.id });
+
+        // Mettre à jour l'objet user local pour la réponse
+        user.patient_id = savedPatient.id;
+      } catch (e) {
+        console.error('Erreur lors de la création du dossier patient:', e);
+      }
+    }
+
     // Récupérer la configuration pour savoir s'il faut envoyer l'email
     let sendEmail = true;
     try {
       const config = await this.settingsService.findOne('user_creation_config');
-      sendEmail = config.value?.sendEmail !== false;
+      sendEmail = (config.value as any)?.sendEmail !== false;
     } catch (e) {
       // Si le paramètre n'existe pas, on envoie par défaut
+    }
+
+    // On peut surcharger via le DTO
+    if (createUserDto.send_email !== undefined) {
+      sendEmail = createUserDto.send_email;
     }
 
     // Créer une invitation si l'utilisateur n'est pas déjà actif (ex: créé par admin)
@@ -314,6 +344,7 @@ export class UsersService implements OnModuleInit {
       user.email,
       user.id,
       sendEmail,
+      createUserDto.password, // IMPORTANT: Utiliser le MÊME mot de passe que celui qui a été hashé
     );
 
     return this.mapToUserResponse(

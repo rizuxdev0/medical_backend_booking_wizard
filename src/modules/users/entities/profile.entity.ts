@@ -73,10 +73,10 @@ export class Profile {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ unique: true })
+  @Column({ unique: true, nullable: true })
   email: string;
 
-  @Column()
+  @Column({ nullable: true })
   password_hash: string; // Utilisez le nom exact de la colonne
 
   @Column({ name: 'first_name', nullable: true })
@@ -114,6 +114,12 @@ export class Profile {
 
   @UpdateDateColumn({ name: 'updated_at' })
   updated_at: Date;
+
+  @Column({ name: 'two_factor_secret', type: 'varchar', nullable: true })
+  two_factor_secret: string;
+
+  @Column({ name: 'is_two_factor_enabled', default: false })
+  is_two_factor_enabled: boolean;
 
   @Column({ name: 'patient_id', type: 'uuid', nullable: true })
   patient_id: string;

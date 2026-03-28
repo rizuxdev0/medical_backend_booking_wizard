@@ -5,13 +5,13 @@ export class ChatMessage {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column()
+  @Column({ type: 'uuid' })
   @Index()
   sender_id: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   @Index()
-  receiver_id: string; // If NULL, it's a broadcast/room message
+  recipient_id: string; // If NULL, it's a broadcast/room message
 
   @Column({ nullable: true })
   @Index()
@@ -22,9 +22,6 @@ export class ChatMessage {
 
   @Column({ default: false })
   is_read: boolean;
-
-  @Column({ nullable: true })
-  type: string; // 'text', 'image', 'system'
 
   @CreateDateColumn({ type: 'timestamptz' })
   created_at: Date;

@@ -14,6 +14,8 @@ import {
   UpdateConsultationNoteDto,
   ConsultationNoteResponseDto,
 } from './dto/create-consultation-note.dto';
+import { MailService } from '../settings/mail.service';
+import { Between } from 'typeorm';
 
 @Injectable()
 export class ConsultationNotesService {
@@ -26,6 +28,7 @@ export class ConsultationNotesService {
     private practitionerRepo: Repository<Practitioner>,
     @InjectRepository(Patient)
     private patientRepo: Repository<Patient>,
+    private readonly mailService: MailService,
   ) {}
 
   async findByAppointment(
@@ -43,6 +46,26 @@ export class ConsultationNotesService {
     }
 
     return this.mapToResponse(note);
+  }
+
+  async findByPatientToday(
+    patientId: string,
+  ): Promise<ConsultationNoteResponseDto | null> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const note = await this.noteRepo.findOne({
+      where: {
+        patientId,
+        createdAt: Between(today, tomorrow),
+      },
+      relations: ['practitioner', 'appointment'],
+      order: { createdAt: 'DESC' },
+    });
+
+    return note ? this.mapToResponse(note) : null;
   }
 
   async findAll(): Promise<ConsultationNote[]> {
@@ -236,6 +259,52 @@ export class ConsultationNotesService {
     }
 
     return this.mapToResponse(closedNote);
+  }
+
+  async sendSummaryEmail(id: string, customMessage?: string): Promise<void> {
+    const note = await this.noteRepo.findOne({
+      where: { id },
+      relations: ['patient', 'practitioner'],
+    });
+
+    if (!note) {
+      throw new NotFoundException('Note de consultation non trouvée');
+    }
+
+    if (!note.patient.email) {
+      throw new BadRequestException("Le patient n'a pas d'adresse email renseignée");
+    }
+
+    const patientName = `${note.patient.firstName} ${note.patient.lastName}`;
+    const practitionerName = note.practitioner 
+      ? `Dr. ${note.practitioner.firstName || ''} ${note.practitioner.lastName || ''}`
+      : 'Votre praticien';
+
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
+        <h2 style="color: #3b82f6;">Résumé de votre consultation</h2>
+        <p>Bonjour ${note.patient.firstName},</p>
+        ${customMessage ? `<p style="font-style: italic; background: #f3f4f6; padding: 10px; border-radius: 5px;">${customMessage}</p>` : ''}
+        <p>Voici le résumé de votre visite du ${note.createdAt.toLocaleDateString('fr-FR')} avec ${practitionerName}.</p>
+        
+        <div style="margin-top: 20px; border: 1px solid #e5e7eb; padding: 15px; border-radius: 8px;">
+          ${note.diagnosis ? `<p><strong>Diagnostic :</strong><br>${note.diagnosis}</p>` : ''}
+          ${note.treatmentPlan ? `<p><strong>Plan de traitement :</strong><br>${note.treatmentPlan.replace(/\n/g, '<br>')}</p>` : ''}
+          ${note.prescriptions ? `<p><strong>Prescriptions :</strong><br>${note.prescriptions.replace(/\n/g, '<br>')}</p>` : ''}
+          ${note.followUpDate ? `<p><strong>Prochain RDV :</strong><br>${new Date(note.followUpDate).toLocaleDateString('fr-FR')}</p>` : ''}
+        </div>
+        
+        <p style="margin-top: 20px; font-size: 12px; color: #6b7280;">
+          Ceci est un message automatique de votre clinique. Pour toute question, veuillez nous contacter directement.
+        </p>
+      </div>
+    `;
+
+    await this.mailService.sendMail({
+      to: note.patient.email,
+      subject: `Résumé de votre consultation - ${note.createdAt.toLocaleDateString('fr-FR')}`,
+      html,
+    });
   }
 
   private mapToResponse(note: ConsultationNote): ConsultationNoteResponseDto {

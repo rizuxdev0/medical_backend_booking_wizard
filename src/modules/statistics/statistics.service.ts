@@ -31,11 +31,21 @@ export class StatisticsService {
       order: { scheduledAt: 'ASC' }
     });
 
-    // Assurer la compatibilité avec le frontend qui attend des noms pluriels
+    // Assurer la compatibilité avec le frontend qui attend du snake_case et des noms pluriels
     return appointments.map(a => ({
       ...a,
-      practitioners: a.practitioner,
-      appointment_types: a.appointmentType
+      scheduled_at: a.scheduledAt,
+      practitioners: a.practitioner ? {
+        ...a.practitioner,
+        first_name: a.practitioner.firstName,
+        last_name: a.practitioner.lastName,
+        consultation_fee: Number(a.practitioner.consultationFee) || 0,
+        specialty: a.practitioner.specialty
+      } : null,
+      appointment_types: a.appointmentType ? {
+        ...a.appointmentType,
+        name: a.appointmentType.name
+      } : null
     }));
   }
 

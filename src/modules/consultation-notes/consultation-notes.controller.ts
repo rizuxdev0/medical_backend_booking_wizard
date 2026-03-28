@@ -46,6 +46,17 @@ export class ConsultationNotesController {
     return this.consultationNotesService.findByAppointment(appointmentId);
   }
 
+  @Get('consultations/patient/:patientId/today')
+  @Roles('admin', 'doctor', 'nurse')
+  @ApiOperation({
+    summary: "Récupérer la note de consultation d'un patient pour aujourd'hui",
+  })
+  findByPatientToday(
+    @Param('patientId') patientId: string,
+  ): Promise<ConsultationNoteResponseDto | null> {
+    return this.consultationNotesService.findByPatientToday(patientId);
+  }
+
   @Get('consultations/:id')
   @Roles('admin', 'doctor', 'nurse')
   @ApiOperation({ summary: 'Récupérer une note de consultation par son ID' })
@@ -81,5 +92,15 @@ export class ConsultationNotesController {
     @CurrentUser() user,
   ): Promise<ConsultationNoteResponseDto> {
     return this.consultationNotesService.close(id, user.id);
+  }
+
+  @Post('consultations/:id/send-summary')
+  @Roles('admin', 'doctor', 'nurse')
+  @ApiOperation({ summary: 'Envoyer le résumé de consultation par email' })
+  sendSummary(
+    @Param('id') id: string,
+    @Body('customMessage') customMessage?: string,
+  ): Promise<void> {
+    return this.consultationNotesService.sendSummaryEmail(id, customMessage);
   }
 }

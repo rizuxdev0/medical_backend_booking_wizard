@@ -2,7 +2,7 @@ import { Injectable, UnauthorizedException, NotFoundException, BadRequestExcepti
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThan } from 'typeorm';
 import * as bcrypt from 'bcrypt';
-import { MailerService } from '@nestjs-modules/mailer';
+import { MailService } from '../settings/mail.service';
 import { UserInvitation } from '../users/entities/user-invitation.entity';
 import { Profile } from '../users/entities/profile.entity';
 import { UserRole } from '../users/entities/user-role.entity';
@@ -16,12 +16,19 @@ export class InvitationsService {
     private profileRepo: Repository<Profile>,
     @InjectRepository(UserRole)
     private roleRepo: Repository<UserRole>,
-    private mailerService: MailerService,
+    private mailService: MailService,
   ) {}
 
-  async createInvitation(email: string, userId: string, sendEmail: boolean = true, createdBy?: string) {
+  async createInvitation(
+    email: string,
+    userId: string,
+    sendEmail: boolean = true,
+    tempPasswordProvided?: string,
+    createdBy?: string,
+  ) {
     const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-    const tempPassword = Math.random().toString(36).slice(-10);
+    const tempPassword =
+      tempPasswordProvided || Math.random().toString(36).slice(-10);
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + 24 * 7); // 7 days
 
@@ -39,7 +46,7 @@ export class InvitationsService {
     // Send Real Email if requested
     if (sendEmail) {
       try {
-        await this.mailerService.sendMail({
+        await this.mailService.sendMail({
           to: email,
           subject: 'Vérification de votre compte MedAgenda',
           html: `
@@ -69,6 +76,27 @@ export class InvitationsService {
   }
 
   async verifyOtp(email: string, otpCode: string) {
+    if (otpCode === 'check') {
+      const invitation = await this.invitationRepo.findOne({
+        where: {
+          email: email.toLowerCase(),
+          used: false,
+          expiresAt: MoreThan(new Date()),
+        },
+      });
+
+      if (!invitation) {
+        throw new NotFoundException(
+          "Aucune invitation en attente pour cette adresse",
+        );
+      }
+
+      return {
+        message: 'Invitation en attente trouvée',
+        exists: true,
+      };
+    }
+
     const invitation = await this.invitationRepo.findOne({
       where: {
         email: email.toLowerCase(),
@@ -76,10 +104,13 @@ export class InvitationsService {
         used: false,
         expiresAt: MoreThan(new Date()),
       },
+      relations: ['user'],
     });
 
     if (!invitation) {
-      throw new UnauthorizedException('Code de vérification invalide ou expiré');
+      throw new UnauthorizedException(
+        'Code de vérification invalide ou expiré',
+      );
     }
 
     return {

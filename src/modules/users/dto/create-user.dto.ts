@@ -87,4 +87,14 @@ export class CreateUserDto {
     { each: true },
   )
   roles?: string[];
+
+  @ApiProperty({ example: true, required: false })
+  @IsOptional()
+  @IsBoolean()
+  send_email?: boolean;
+
+  @ApiProperty({ example: false, required: false })
+  @IsOptional()
+  @IsBoolean()
+  create_patient_record?: boolean;
 }

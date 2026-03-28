@@ -24,6 +24,7 @@ import {
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { Public } from '../../common/decorators/public.decorator';
 
 @ApiTags('queue')
 @ApiBearerAuth()
@@ -32,8 +33,9 @@ import { Roles } from '../../common/decorators/roles.decorator';
 export class QueueController {
   constructor(private readonly queueService: QueueService) {}
 
+  @Public()
   @Get('entries')
-  @Roles('admin', 'doctor', 'secretary', 'nurse')
+  @Roles('admin', 'doctor', 'secretary', 'nurse', 'patient')
   @ApiOperation({ summary: "Liste des entrées de la file d'attente" })
   findAll(
     @Query() query: QueueQueryDto,

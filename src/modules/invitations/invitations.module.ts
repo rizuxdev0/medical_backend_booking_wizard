@@ -5,6 +5,7 @@ import { InvitationsService } from './invitations.service';
 import { UserInvitation } from '../users/entities/user-invitation.entity';
 import { Profile } from '../users/entities/profile.entity';
 import { UserRole } from '../users/entities/user-role.entity';
+import { SettingsModule } from '../settings/settings.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { UserRole } from '../users/entities/user-role.entity';
       Profile,
       UserRole,
     ]),
+    SettingsModule,
   ],
   controllers: [InvitationsController],
   providers: [InvitationsService],
