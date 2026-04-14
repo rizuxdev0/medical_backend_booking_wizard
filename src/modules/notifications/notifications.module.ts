@@ -7,6 +7,7 @@ import { NotificationLog } from './entities/notification-log.entity';
 import { Appointment } from '../appointments/entities/appointment.entity';
 import { Profile } from '../users/entities/profile.entity';
 import { Patient } from '../patients/entities/patient.entity';
+import { NotificationsGateway } from './notifications.gateway';
 
 @Module({
   imports: [
@@ -19,7 +20,7 @@ import { Patient } from '../patients/entities/patient.entity';
     ]),
   ],
   controllers: [NotificationsController],
-  providers: [NotificationsService],
-  exports: [NotificationsService],
+  providers: [NotificationsService, NotificationsGateway],
+  exports: [NotificationsService, NotificationsGateway],
 })
 export class NotificationsModule {}

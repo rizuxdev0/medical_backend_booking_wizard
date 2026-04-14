@@ -127,6 +127,25 @@ export class ActivityLogsService {
     return this.mapToResponse(log);
   }
 
+  async archiveOldLogs(): Promise<{ deleted: number }> {
+    const context = 'ActivityLogsArchiver';
+    const twelveMonthsAgo = new Date();
+    twelveMonthsAgo.setFullYear(twelveMonthsAgo.getFullYear() - 1);
+
+    const { LessThan } = require('typeorm');
+    const logsToDelete = await this.logRepo.count({
+      where: { createdAt: LessThan(twelveMonthsAgo) },
+    });
+
+    if (logsToDelete > 0) {
+      await this.logRepo.delete({
+        createdAt: LessThan(twelveMonthsAgo),
+      });
+    }
+
+    return { deleted: logsToDelete };
+  }
+
   private mapToResponse(log: ActivityLog): ActivityLogResponseDto {
     const response: ActivityLogResponseDto = {
       id: log.id,

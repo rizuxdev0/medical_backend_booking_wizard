@@ -15,6 +15,7 @@ import {
 import { Appointment } from '../appointments/entities/appointment.entity';
 import { Profile } from '../users/entities/profile.entity';
 import { Patient } from '../patients/entities/patient.entity';
+import { NotificationsGateway } from './notifications.gateway';
 
 @Injectable()
 export class NotificationsService {
@@ -29,6 +30,7 @@ export class NotificationsService {
     private profileRepo: Repository<Profile>,
     @InjectRepository(Patient)
     private patientRepo: Repository<Patient>,
+    private readonly gateway: NotificationsGateway,
   ) {}
 
   // ==================== NOTIFICATIONS PLANIFIÉES ====================
@@ -140,7 +142,14 @@ export class NotificationsService {
     const log = this.logRepo.create(logData);
     await this.logRepo.save(log);
 
-    return this.mapLogToResponse(log);
+    const response = this.mapLogToResponse(log);
+
+    // Emit via WebSocket
+    if (log.userId) {
+      this.gateway.sendNotificationToUser(log.userId, response);
+    }
+
+    return response;
   }
 
   async findAllLogs(

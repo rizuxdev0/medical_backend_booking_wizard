@@ -11,6 +11,8 @@ import { InvoiceInstallment } from './entities/invoice-installment.entity';
 import { InvoiceItem } from './entities/invoice-item.entity';
 import { Invoice } from './entities/invoice.entity';
 import { Payment } from './entities/payment.entity';
+import { Insurer } from './entities/insurer.entity';
+import { InsurersController } from './insurers.controller';
 
 @Module({
   imports: [
@@ -23,9 +25,10 @@ import { Payment } from './entities/payment.entity';
       Patient,
       Practitioner,
       Appointment,
+      Insurer,
     ]),
   ],
-  controllers: [InvoicesController],
+  controllers: [InvoicesController, InsurersController],
   providers: [InvoicesService],
   exports: [InvoicesService],
 })

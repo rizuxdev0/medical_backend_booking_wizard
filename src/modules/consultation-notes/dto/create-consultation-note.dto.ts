@@ -82,6 +82,9 @@ export class ConsultationNoteResponseDto {
   is_closed: boolean;
   closed_at: Date | null;
   closed_by: string | null;
+  is_signed: boolean;
+  signed_at: Date | null;
+  signature_hash: string | null;
   created_at: Date;
   updated_at: Date;
 

@@ -32,5 +32,12 @@ export class StatisticsController {
   ) {
     return this.statisticsService.getQueueStats(start, end);
   }
+
+  @Get('occupancy')
+  @Roles('admin', 'doctor', 'secretary', 'nurse')
+  @ApiOperation({ summary: 'Statistiques d\'occupation des lits' })
+  async getOccupancy() {
+    return this.statisticsService.getOccupancyStats();
+  }
 }
 

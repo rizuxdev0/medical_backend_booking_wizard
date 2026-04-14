@@ -5,9 +5,11 @@ import { StatisticsService } from './statistics.service';
 import { Appointment } from '../appointments/entities/appointment.entity';
 import { QueueEntry } from '../queue/entities/queue-entry.entity';
 
+import { InpatientBed } from '../inpatient-beds/entities/inpatient-bed.entity';
+
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Appointment, QueueEntry]),
+    TypeOrmModule.forFeature([Appointment, QueueEntry, InpatientBed]),
   ],
   controllers: [StatisticsController],
   providers: [StatisticsService],

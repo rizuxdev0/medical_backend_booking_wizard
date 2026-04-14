@@ -15,6 +15,7 @@ import { Profile } from '../../users/entities/profile.entity';
 import { InvoiceInstallment } from './invoice-installment.entity';
 import { Payment } from './payment.entity';
 import { InvoiceItem } from './invoice-item.entity';
+import { Insurer } from './insurer.entity';
 
 @Entity('invoices')
 export class Invoice {
@@ -105,6 +106,27 @@ export class Invoice {
   @Column({ name: 'is_deferred', default: false })
   isDeferred: boolean;
 
+  @Column({ name: 'insurer_id', nullable: true })
+  insurerId: string;
+
+  @Column({
+    name: 'insurance_amount',
+    type: 'decimal',
+    precision: 12,
+    scale: 2,
+    default: 0,
+  })
+  insuranceAmount: number;
+
+  @Column({
+    name: 'patient_amount',
+    type: 'decimal',
+    precision: 12,
+    scale: 2,
+    default: 0,
+  })
+  patientAmount: number;
+
   @Column({ name: 'installment_count', default: 1 })
   installmentCount: number;
 
@@ -136,6 +158,10 @@ export class Invoice {
   @ManyToOne(() => Profile)
   @JoinColumn({ name: 'created_by' })
   creator: Profile;
+
+  @ManyToOne(() => Insurer)
+  @JoinColumn({ name: 'insurer_id' })
+  insurer: Insurer;
 
   @OneToMany(() => InvoiceItem, (item) => item.invoice)
   items: InvoiceItem[];

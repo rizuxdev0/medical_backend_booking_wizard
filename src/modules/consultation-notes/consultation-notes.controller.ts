@@ -103,4 +103,11 @@ export class ConsultationNotesController {
   ): Promise<void> {
     return this.consultationNotesService.sendSummaryEmail(id, customMessage);
   }
+
+  @Post('consultations/:id/sign')
+  @Roles('admin', 'doctor')
+  @ApiOperation({ summary: 'Signer électroniquement une note de consultation' })
+  sign(@Param('id') id: string): Promise<ConsultationNoteResponseDto> {
+    return this.consultationNotesService.sign(id);
+  }
 }

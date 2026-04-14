@@ -65,6 +65,12 @@ export class Patient {
   @Column({ name: 'insurance_number', nullable: true })
   insuranceNumber: string;
 
+  @Column({ name: 'insurer_id', nullable: true })
+  insurerId: string;
+
+  @Column({ name: 'coverage_rate', type: 'decimal', precision: 5, scale: 2, default: 0 })
+  coverageRate: number;
+
   @Column({ name: 'emergency_contact_name', nullable: true })
   emergencyContactName: string;
 
@@ -79,6 +85,24 @@ export class Patient {
 
   @Column({ nullable: true })
   notes: string;
+
+  @Column({ name: 'weight', type: 'decimal', precision: 5, scale: 2, nullable: true })
+  weight: number;
+
+  @Column({ name: 'height', type: 'decimal', precision: 5, scale: 2, nullable: true })
+  height: number;
+
+  @Column({ name: 'chronic_diseases', type: 'text', nullable: true })
+  chronicDiseases: string;
+
+  @Column({ name: 'current_medications', type: 'text', nullable: true })
+  currentMedications: string;
+
+  @Column({ name: 'family_history', type: 'text', nullable: true })
+  familyHistory: string;
+
+  @Column({ name: 'vaccination_history', type: 'text', nullable: true })
+  vaccinationHistory: string;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

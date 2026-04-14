@@ -9,7 +9,7 @@ export const databaseConfig = (): TypeOrmModuleOptions => ({
   password: process.env.DB_PASSWORD || 'postgres',
   database: process.env.DB_NAME || 'medical_app',
   entities: [__dirname + '/../**/*.entity{.ts,.js}'],
-  synchronize: false, // Remis à true pour créer les nouvelles colonnes
+  synchronize: false, // Désactivé car provoque des erreurs sur les tables existantes (settings)
   logging: process.env.NODE_ENV === 'development',
 });
 

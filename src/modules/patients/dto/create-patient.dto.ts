@@ -123,4 +123,32 @@ export class CreatePatientDto {
   @IsOptional()
   @IsString()
   user_id?: string;
+
+  @ApiProperty({ example: 75.5, required: false })
+  @IsOptional()
+  weight?: number;
+
+  @ApiProperty({ example: 175, required: false })
+  @IsOptional()
+  height?: number;
+
+  @ApiProperty({ example: 'Hypertension, Diabète Type 2', required: false })
+  @IsOptional()
+  @IsString()
+  chronic_diseases?: string;
+
+  @ApiProperty({ example: 'Metformine 500mg, Lisinopril 10mg', required: false })
+  @IsOptional()
+  @IsString()
+  current_medications?: string;
+
+  @ApiProperty({ example: 'Cancer du colon (Père), Diabète (Mère)', required: false })
+  @IsOptional()
+  @IsString()
+  family_history?: string;
+
+  @ApiProperty({ example: 'BCG, Hépatite B, COVID-19 (3 doses)', required: false })
+  @IsOptional()
+  @IsString()
+  vaccination_history?: string;
 }

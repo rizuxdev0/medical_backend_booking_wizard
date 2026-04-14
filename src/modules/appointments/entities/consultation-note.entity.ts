@@ -71,6 +71,15 @@ export class ConsultationNote {
   @Column({ name: 'closed_by', nullable: true })
   closedBy: string;
 
+  @Column({ name: 'is_signed', default: false })
+  isSigned: boolean;
+
+  @Column({ name: 'signed_at', type: 'timestamptz', nullable: true })
+  signedAt: Date;
+
+  @Column({ name: 'signature_hash', type: 'text', nullable: true })
+  signatureHash: string;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

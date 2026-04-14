@@ -64,6 +64,23 @@ export class InvoicesController {
     return this.invoicesService.getStats();
   }
 
+  @Post('reminders/auto')
+  @Roles('admin', 'accountant')
+  @ApiOperation({ summary: 'Déclencher les relances automatiques pour impayés' })
+  autoSendReminders() {
+    return this.invoicesService.autoSendReminders();
+  }
+
+  @Get('reports/profitability')
+  @Roles('admin', 'accountant')
+  @ApiOperation({ summary: 'Rapport de rentabilité par praticien' })
+  getProfitabilityReport(
+    @Query('from') from: string,
+    @Query('to') to: string,
+  ) {
+    return this.invoicesService.getProfitabilityReport(from, to);
+  }
+
   @Patch(':id/status')
   @Roles('admin', 'accountant', 'secretary')
   @ApiOperation({ summary: 'Mettre à jour le statut d\'une facture' })

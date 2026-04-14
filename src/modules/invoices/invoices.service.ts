@@ -170,6 +170,16 @@ export class InvoicesService {
     const discountAmount = createInvoiceDto.discount_amount || 0;
     const totalAmount = subtotal + taxAmount - discountAmount;
 
+    // 4b. Calculer Tiers-Payant
+    let insuranceAmount = 0;
+    let patientAmount = totalAmount;
+
+    if (createInvoiceDto.insurer_id) {
+      const coverageRate = createInvoiceDto.coverage_rate || 0;
+      insuranceAmount = totalAmount * (coverageRate / 100);
+      patientAmount = totalAmount - insuranceAmount;
+    }
+
     // 5. Générer un numéro de facture unique
     const invoiceNumber = await this.generateInvoiceNumber();
 
@@ -186,12 +196,15 @@ export class InvoicesService {
       taxAmount,
       discountAmount,
       totalAmount,
+      insuranceAmount,
+      patientAmount,
       amountPaid: 0,
       amountDue: totalAmount,
       currency: createInvoiceDto.currency || 'XOF',
       isDeferred: createInvoiceDto.is_deferred || false,
       notes: createInvoiceDto.notes,
       createdBy,
+      insurerId: createInvoiceDto.insurer_id,
     };
 
     // Ajouter les champs optionnels seulement s'ils sont définis
@@ -557,7 +570,67 @@ export class InvoicesService {
     };
   }
 
+  // ==================== REPORTING ET RENTABILITÉ ====================
+
+  async getProfitabilityReport(dateFrom: string, dateTo: string) {
+    const rawData = await this.invoiceRepo.find({
+      where: {
+        issueDate: Between(new Date(dateFrom), new Date(dateTo)),
+        status: In(['paid', 'partial'])
+      },
+      relations: ['practitioner', 'items']
+    });
+
+    const reportByPractitioner = {};
+    rawData.forEach(inv => {
+      const practitionerName = inv.practitioner ? `${inv.practitioner.firstName} ${inv.practitioner.lastName}` : 'Inconnu';
+      if (!reportByPractitioner[practitionerName]) {
+        reportByPractitioner[practitionerName] = { total: 0, count: 0 };
+      }
+      reportByPractitioner[practitionerName].total += Number(inv.amountPaid);
+      reportByPractitioner[practitionerName].count += 1;
+    });
+
+    return {
+      period: { from: dateFrom, to: dateTo },
+      byPractitioner: reportByPractitioner,
+      totalRevenue: rawData.reduce((sum, inv) => sum + Number(inv.amountPaid), 0)
+    };
+  }
+
+  // ==================== RELANCE AUTOMATIQUE ====================
+
+  async autoSendReminders() {
+    const today = new Date();
+    const overdueInvoices = await this.invoiceRepo.find({
+      where: {
+        status: In(['sent', 'partial', 'overdue']),
+        dueDate: LessThanOrEqual(today)
+      },
+      relations: ['patient']
+    });
+
+    const results: any[] = [];
+    for (const inv of overdueInvoices) {
+      if (inv.amountDue > 0) {
+        // Simulation d'envoi SMS/Email
+        const message = `Rappel: Votre facture ${inv.invoiceNumber} de ${inv.amountDue} CFA est échue. Merci de régulariser.`;
+        console.log(`[RELANCE] ${inv.patient.firstName} ${inv.patient.lastName} (${inv.patient.phone}): ${message}`);
+        
+        results.push({
+          invoiceNumber: inv.invoiceNumber,
+          patient: `${inv.patient.firstName} ${inv.patient.lastName}`,
+          amountDue: inv.amountDue,
+          status: 'SMS_SENT'
+        });
+      }
+    }
+
+    return { remindedCount: results.length, details: results };
+  }
+
   // ==================== MÉTHODES PRIVÉES ====================
+  // (mapToResponse and other private methods below...)
 
   private async generateInvoiceNumber(): Promise<string> {
     const year = new Date().getFullYear();

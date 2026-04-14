@@ -94,6 +94,17 @@ export class CreateInvoiceDto {
   @IsString()
   notes?: string;
 
+  @ApiProperty({ example: 'uuid-insurer', required: false })
+  @IsOptional()
+  @IsUUID()
+  insurer_id?: string;
+
+  @ApiProperty({ example: 80, required: false })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  coverage_rate?: number;
+
   @ApiProperty({ type: [CreateInvoiceItemDto] })
   @IsArray()
   @ValidateNested({ each: true })

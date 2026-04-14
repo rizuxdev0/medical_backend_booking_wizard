@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between } from 'typeorm';
 import { Appointment } from '../appointments/entities/appointment.entity';
 import { QueueEntry } from '../queue/entities/queue-entry.entity';
+import { InpatientBed } from '../inpatient-beds/entities/inpatient-bed.entity';
 
 @Injectable()
 export class StatisticsService {
@@ -11,7 +12,24 @@ export class StatisticsService {
     private appointmentRepo: Repository<Appointment>,
     @InjectRepository(QueueEntry)
     private queueRepo: Repository<QueueEntry>,
+    @InjectRepository(InpatientBed)
+    private bedRepo: Repository<InpatientBed>,
   ) {}
+
+  async getOccupancyStats() {
+    const total = await this.bedRepo.count();
+    const occupied = await this.bedRepo.count({ where: { status: 'occupied' } });
+    const cleaning = await this.bedRepo.count({ where: { status: 'cleaning' } });
+    const available = total - occupied - cleaning;
+
+    return {
+      total,
+      occupied,
+      cleaning,
+      available,
+      rate: total > 0 ? (occupied / total) * 100 : 0
+    };
+  }
 
   async getAppointmentsStats(start: string, end: string, practitionerId?: string) {
     const startDate = new Date(start);

@@ -261,6 +261,34 @@ export class ConsultationNotesService {
     return this.mapToResponse(closedNote);
   }
 
+  async sign(id: string): Promise<ConsultationNoteResponseDto> {
+    const note = await this.noteRepo.findOne({
+      where: { id },
+      relations: ['practitioner', 'patient'],
+    });
+
+    if (!note) {
+      throw new NotFoundException(`Note de consultation avec l'ID ${id} non trouvée`);
+    }
+
+    if (note.isSigned) {
+      throw new BadRequestException('Cette note est déjà signée');
+    }
+
+    // Create a digital signature hash
+    const crypto = require('crypto');
+    const contentToSign = `${note.id}|${note.diagnosis}|${note.treatmentPlan}|${note.createdAt.toISOString()}`;
+    const signatureHash = crypto.createHash('sha256').update(contentToSign).digest('hex');
+
+    await this.noteRepo.update(id, {
+      isSigned: true,
+      signedAt: new Date(),
+      signatureHash,
+    });
+
+    return this.findOne(id);
+  }
+
   async sendSummaryEmail(id: string, customMessage?: string): Promise<void> {
     const note = await this.noteRepo.findOne({
       where: { id },
@@ -328,6 +356,9 @@ export class ConsultationNotesService {
       is_closed: note.isClosed,
       closed_at: note.closedAt || null,
       closed_by: note.closedBy || null,
+      is_signed: note.isSigned,
+      signed_at: note.signedAt || null,
+      signature_hash: note.signatureHash || null,
       created_at: note.createdAt,
       updated_at: note.updatedAt,
     };

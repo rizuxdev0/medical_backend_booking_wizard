@@ -128,6 +128,12 @@ export class PatientsService {
       medical_notes: 'medicalNotes',
       notes: 'notes',
       user_id: 'userId',
+      weight: 'weight',
+      height: 'height',
+      chronic_diseases: 'chronicDiseases',
+      current_medications: 'currentMedications',
+      family_history: 'familyHistory',
+      vaccination_history: 'vaccinationHistory',
     };
 
     Object.keys(fieldMappings).forEach((snakeField) => {
@@ -206,6 +212,12 @@ export class PatientsService {
       medical_notes: 'medicalNotes',
       notes: 'notes',
       user_id: 'userId',
+      weight: 'weight',
+      height: 'height',
+      chronic_diseases: 'chronicDiseases',
+      current_medications: 'currentMedications',
+      family_history: 'familyHistory',
+      vaccination_history: 'vaccinationHistory',
     };
 
     Object.keys(fieldMappings).forEach((snakeField) => {
@@ -312,6 +324,12 @@ export class PatientsService {
       allergies: patient.allergies,
       medical_notes: patient.medicalNotes,
       notes: patient.notes,
+      weight: patient.weight ? Number(patient.weight) : null,
+      height: patient.height ? Number(patient.height) : null,
+      chronic_diseases: patient.chronicDiseases,
+      current_medications: patient.currentMedications,
+      family_history: patient.familyHistory,
+      vaccination_history: patient.vaccinationHistory,
       created_at: patient.createdAt,
       updated_at: patient.updatedAt,
     };

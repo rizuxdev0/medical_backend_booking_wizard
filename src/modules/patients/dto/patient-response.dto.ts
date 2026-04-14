@@ -23,6 +23,12 @@ export class PatientResponseDto {
   allergies: string | null;
   medical_notes: string | null;
   notes: string | null;
+  weight: number | null;
+  height: number | null;
+  chronic_diseases: string | null;
+  current_medications: string | null;
+  family_history: string | null;
+  vaccination_history: string | null;
   created_at: Date;
   updated_at: Date;
 }
