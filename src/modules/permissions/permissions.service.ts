@@ -217,6 +217,11 @@ export class PermissionsService implements OnModuleInit {
       // Queue (Staff)
       { code: 'queue.view', name: 'Voir file d\'attente', module: 'queue' },
       { code: 'queue.manage', name: 'Gérer file d\'attente', module: 'queue' },
+      { code: 'practitioner.dashboard', name: 'Accès Bureau du Praticien', module: 'clinical' },
+
+      // Pharmacy & Laboratory
+      { code: 'pharmacy.view', name: 'Voir Pharmacie', module: 'pharmacy' },
+      { code: 'laboratory.view', name: 'Voir Laboratoire', module: 'laboratory' },
 
       // Billing (Staff)
       { code: 'billing.view', name: 'Voir facturation clinique', module: 'billing' },
@@ -265,14 +270,15 @@ export class PermissionsService implements OnModuleInit {
         'patients.view', 'patients.edit', 'patients.documents',
         'appointments.view', 'appointments.create', 'appointments.edit', 'appointments.close',
         'practitioners.view', 'queue.view', 'queue.manage',
-        'billing.view', 'chat.view', 'reports.view'
+        'billing.view', 'chat.view', 'reports.view',
+        'practitioner.dashboard', 'pharmacy.view', 'laboratory.view'
       ],
       secretary: [
         'patients.view', 'patients.create', 'patients.edit', 'patients.documents',
         'appointments.view', 'appointments.create', 'appointments.edit', 'appointments.delete',
         'practitioners.view', 'queue.view', 'queue.manage',
         'billing.view', 'billing.create', 'payments.create', 'checkout.manage',
-        'chat.view'
+        'chat.view', 'pharmacy.view', 'laboratory.view'
       ],
       nurse: [
         'patients.view', 'patients.documents', 'appointments.view', 'queue.view', 'chat.view'

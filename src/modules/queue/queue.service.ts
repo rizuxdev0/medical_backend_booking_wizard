@@ -176,8 +176,21 @@ export class QueueService {
     const entry = this.queueEntryRepo.create(entryData);
     await this.queueEntryRepo.save(entry);
 
-    // 6. Mettre à jour le rendez-vous si existant
-    if (checkInDto.appointment_id) {
+    // 6. Créer un rendez-vous si manquant
+    if (!checkInDto.appointment_id && checkInDto.practitioner_id) {
+      const apptData = {
+        patientId: checkInDto.patient_id,
+        practitionerId: checkInDto.practitioner_id,
+        scheduledAt: new Date(),
+        status: 'confirmed',
+        durationMinutes: 30,
+        notes: checkInDto.notes || 'Check-in direct',
+      };
+      const appointment = this.appointmentRepo.create(apptData);
+      const savedAppt = await this.appointmentRepo.save(appointment);
+      entry.appointmentId = savedAppt.id;
+      await this.queueEntryRepo.save(entry);
+    } else if (checkInDto.appointment_id) {
       await this.appointmentRepo.update(checkInDto.appointment_id, {
         status: 'confirmed',
       });
