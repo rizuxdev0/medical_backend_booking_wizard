@@ -18,6 +18,8 @@ export class PatientResponseDto {
   social_security_number: string | null;
   insurance_provider: string | null;
   insurance_number: string | null;
+  insurer_id: string | null;
+  coverage_rate: number;
   emergency_contact_name: string | null;
   emergency_contact_phone: string | null;
   allergies: string | null;

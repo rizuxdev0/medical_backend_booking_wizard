@@ -38,6 +38,19 @@ export class AppointmentsController {
     return this.appointmentsService.findAll(query);
   }
 
+  @Get('available-practitioners')
+  @Roles('admin', 'doctor', 'secretary', 'nurse', 'patient')
+  @ApiOperation({ summary: 'Liste les praticiens disponibles pour un créneau' })
+  findAvailable(
+    @Query('scheduled_at') scheduledAt: string,
+    @Query('duration_minutes') duration?: number,
+  ) {
+    return this.appointmentsService.findAvailablePractitioners(
+      new Date(scheduledAt),
+      duration ? Number(duration) : 30,
+    );
+  }
+
   @Get(':id')
   @Roles('admin', 'doctor', 'secretary', 'nurse')
   @ApiOperation({ summary: "Détail d'un rendez-vous" })

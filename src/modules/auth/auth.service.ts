@@ -142,6 +142,10 @@ export class AuthService {
       throw new UnauthorizedException('Email ou mot de passe incorrect');
     }
 
+    if (!user.is_active) {
+      throw new UnauthorizedException("Votre compte n'est pas encore activé. Veuillez utiliser le code reçu par email.");
+    }
+
     const isMatch = await bcrypt.compare(loginDto.password, user.password_hash);
     console.log(`[AUTH] Password match for ${user.email}: ${isMatch}`);
 
@@ -313,7 +317,10 @@ export class AuthService {
     if (!isMatch) throw new UnauthorizedException('Mot de passe actuel incorrect');
 
     const passwordHash = await bcrypt.hash(data.new, 12);
-    await this.profileRepo.update(userId, { password_hash: passwordHash });
+    await this.profileRepo.update(userId, { 
+      password_hash: passwordHash,
+      must_change_password: false
+    });
 
     return { message: 'Mot de passe mis à jour avec succès' };
   }

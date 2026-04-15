@@ -36,4 +36,9 @@ export class CreateDocumentDto {
   @IsString()
   @IsOptional()
   notes?: string;
+
+  @ApiProperty()
+  @IsString()
+  @IsOptional()
+  type?: string;
 }

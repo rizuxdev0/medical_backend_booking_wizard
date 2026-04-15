@@ -4,7 +4,10 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
+import { Insurer } from '../../invoices/entities/insurer.entity';
 
 @Entity('patients')
 export class Patient {
@@ -67,6 +70,10 @@ export class Patient {
 
   @Column({ name: 'insurer_id', nullable: true })
   insurerId: string;
+
+  @ManyToOne(() => Insurer, { nullable: true })
+  @JoinColumn({ name: 'insurer_id' })
+  insurer: Insurer;
 
   @Column({ name: 'coverage_rate', type: 'decimal', precision: 5, scale: 2, default: 0 })
   coverageRate: number;

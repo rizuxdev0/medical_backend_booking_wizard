@@ -104,7 +104,6 @@ export class InvitationsService {
         used: false,
         expiresAt: MoreThan(new Date()),
       },
-      relations: ['user'],
     });
 
     if (!invitation) {
@@ -113,10 +112,21 @@ export class InvitationsService {
       );
     }
 
+    // Activer temporairement le compte avec le mot de passe temporaire
+    // et forcer le changement au premier login
+    const salt = await bcrypt.genSalt(12);
+    const tempPasswordHash = await bcrypt.hash(invitation.tempPassword, salt);
+
+    await this.profileRepo.update(invitation.userId, {
+      password_hash: tempPasswordHash,
+      is_active: true,
+      must_change_password: true,
+    });
+
     return {
-      message: 'Code vérifié avec succès',
-      userId: invitation.userId,
-      tempPassword: invitation.tempPassword,
+      message: 'Code vérifié avec succès. Vous pouvez maintenant vous connecter avec votre mot de passe temporaire.',
+      user_id: invitation.userId,
+      temp_password: invitation.tempPassword,
     };
   }
 

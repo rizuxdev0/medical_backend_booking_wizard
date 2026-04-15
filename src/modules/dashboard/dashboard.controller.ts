@@ -89,4 +89,11 @@ export class DashboardController {
   getQueueStats() {
     return this.dashboardService.getQueueStats();
   }
+
+  @Get('practitioner-statuses')
+  @Roles('admin', 'doctor', 'nurse', 'receptionist')
+  @ApiOperation({ summary: 'État des praticiens en temps réel' })
+  getPractitionerStatuses() {
+    return this.dashboardService.getPractitionerStatuses();
+  }
 }

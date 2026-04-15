@@ -95,6 +95,15 @@ export class CreatePatientDto {
   @IsString()
   insurance_number?: string;
 
+  @ApiProperty({ example: 'uuid-of-insurer', required: false })
+  @IsOptional()
+  @IsString()
+  insurer_id?: string;
+
+  @ApiProperty({ example: 80.0, required: false })
+  @IsOptional()
+  coverage_rate?: number;
+
   @ApiProperty({ example: 'Fatou Touré', required: false })
   @IsOptional()
   @IsString()

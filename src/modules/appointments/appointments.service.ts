@@ -567,6 +567,37 @@ export class AppointmentsService {
     return { message: 'Rendez-vous annulé avec succès' };
   }
 
+  // ==================== DISPONIBILITÉ ====================
+  async findAvailablePractitioners(
+    scheduledAt: Date,
+    duration: number,
+  ): Promise<any[]> {
+    // 1. Récupérer tous les praticiens actifs
+    const practitioners = await this.practitionerRepo.find({
+      where: { isActive: true },
+    });
+
+    const availablePractitioners: Practitioner[] = [];
+
+    // 2. Vérifier pour chaque praticien
+    for (const p of practitioners) {
+      try {
+        await this.checkPractitionerAvailability(p.id, scheduledAt, duration);
+        await this.checkConflicts(p.id, scheduledAt, duration);
+        availablePractitioners.push(p);
+      } catch (e) {
+        // Not available, skip
+      }
+    }
+
+    return availablePractitioners.map((p) => ({
+      id: p.id,
+      first_name: p.firstName,
+      last_name: p.lastName,
+      specialty: p.specialty,
+    }));
+  }
+
   // ==================== MÉTHODES PRIVÉES ====================
 
   private async checkPractitionerAvailability(

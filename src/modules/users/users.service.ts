@@ -84,6 +84,10 @@ export class UsersService implements OnModuleInit {
           BEGIN
             ALTER TABLE "profiles" ADD COLUMN IF NOT EXISTS "patient_id" uuid;
           EXCEPTION WHEN OTHERS THEN RAISE NOTICE 'profiles.patient_id already exists'; END;
+
+          BEGIN
+            ALTER TABLE "profiles" ADD COLUMN IF NOT EXISTS "must_change_password" boolean DEFAULT false;
+          EXCEPTION WHEN OTHERS THEN RAISE NOTICE 'profiles.must_change_password already exists'; END;
           
           -- Drop problematic types
           BEGIN DROP TYPE IF EXISTS "public"."app_role" CASCADE; EXCEPTION WHEN OTHERS THEN END;

@@ -191,15 +191,31 @@ export class AppModule implements OnModuleInit {
         CREATE TABLE IF NOT EXISTS "insurers" (
           "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
           "name" character varying NOT NULL,
+          "code" character varying,
           "coverage_rate" numeric(5,2) DEFAULT 0,
           "contact_name" character varying,
           "email" character varying,
           "phone" character varying,
+          "address" character varying,
+          "city" character varying,
+          "postal_code" character varying,
+          "website" character varying,
           "is_active" boolean DEFAULT true,
           "createdAt" TIMESTAMP NOT NULL DEFAULT now(),
           "updatedAt" TIMESTAMP NOT NULL DEFAULT now(),
-          CONSTRAINT "PK_insurers" PRIMARY KEY ("id")
+          CONSTRAINT "PK_insurers" PRIMARY KEY ("id"),
+          CONSTRAINT "UQ_insurers_code" UNIQUE ("code")
         )
+      `);
+
+      // Add missing columns to insurers if they already exist
+      await queryRunner.query(`
+        ALTER TABLE "insurers" 
+        ADD COLUMN IF NOT EXISTS "code" character varying,
+        ADD COLUMN IF NOT EXISTS "address" character varying,
+        ADD COLUMN IF NOT EXISTS "city" character varying,
+        ADD COLUMN IF NOT EXISTS "postal_code" character varying,
+        ADD COLUMN IF NOT EXISTS "website" character varying
       `);
 
       // Add insurance fields to invoices
@@ -210,11 +226,25 @@ export class AppModule implements OnModuleInit {
         ADD COLUMN IF NOT EXISTS "patient_amount" numeric(12,2) DEFAULT 0
       `);
 
-      // Add coverage_rate to patients
+      // Add coverage_rate and health info to patients
       await queryRunner.query(`
         ALTER TABLE "patients" 
         ADD COLUMN IF NOT EXISTS "insurer_id" uuid,
-        ADD COLUMN IF NOT EXISTS "coverage_rate" numeric(5,2) DEFAULT 0
+        ADD COLUMN IF NOT EXISTS "coverage_rate" numeric(5,2) DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS "weight" numeric(5,2),
+        ADD COLUMN IF NOT EXISTS "height" numeric(5,2),
+        ADD COLUMN IF NOT EXISTS "blood_type" character varying,
+        ADD COLUMN IF NOT EXISTS "nationality" character varying,
+        ADD COLUMN IF NOT EXISTS "occupation" character varying,
+        ADD COLUMN IF NOT EXISTS "marital_status" character varying,
+        ADD COLUMN IF NOT EXISTS "chronic_diseases" text,
+        ADD COLUMN IF NOT EXISTS "current_medications" text,
+        ADD COLUMN IF NOT EXISTS "family_history" text,
+        ADD COLUMN IF NOT EXISTS "vaccination_history" text,
+        ADD COLUMN IF NOT EXISTS "allergies" text,
+        ADD COLUMN IF NOT EXISTS "medical_notes" text,
+        ADD COLUMN IF NOT EXISTS "emergency_contact_name" character varying,
+        ADD COLUMN IF NOT EXISTS "emergency_contact_phone" character varying
       `);
 
       // Add preferredSupplierId to pharmacy_inventory if missing
@@ -223,7 +253,7 @@ export class AppModule implements OnModuleInit {
         ADD COLUMN IF NOT EXISTS "preferredSupplierId" character varying;
       `);
 
-      // Add signature fields to consultations
+      // Add signature fields to consultations and password change flag to profiles
       await queryRunner.query(`
         ALTER TABLE "consultation_notes" 
         ADD COLUMN IF NOT EXISTS "is_signed" boolean DEFAULT false,
@@ -231,7 +261,12 @@ export class AppModule implements OnModuleInit {
         ADD COLUMN IF NOT EXISTS "signature_hash" text
       `);
 
-      // Add supplier_prices table
+      await queryRunner.query(`
+        ALTER TABLE "profiles"
+        ADD COLUMN IF NOT EXISTS "must_change_password" boolean DEFAULT false
+      `);
+
+      // Create supplier_prices table
       await queryRunner.query(`
         CREATE TABLE IF NOT EXISTS "supplier_prices" (
           "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
@@ -246,7 +281,25 @@ export class AppModule implements OnModuleInit {
         )
       `);
 
-      console.log('✅ Supply Chain & Logistics tables verified/created');
+      // Create Documents table
+      await queryRunner.query(`
+        CREATE TABLE IF NOT EXISTS "documents" (
+          "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
+          "patient_id" uuid NOT NULL,
+          "practitioner_id" uuid,
+          "name" character varying NOT NULL,
+          "type" character varying,
+          "file_url" character varying NOT NULL,
+          "file_type" character varying,
+          "file_size" integer,
+          "notes" text,
+          "created_at" TIMESTAMP NOT NULL DEFAULT now(),
+          "updated_at" TIMESTAMP NOT NULL DEFAULT now(),
+          CONSTRAINT "PK_documents" PRIMARY KEY ("id")
+        )
+      `);
+
+      console.log('✅ Supply Chain & Documents tables verified/created');
     } catch (error) {
       console.error('❌ Error creating supply chain tables:', error);
     } finally {

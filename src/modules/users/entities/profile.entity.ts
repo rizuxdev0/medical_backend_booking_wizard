@@ -121,6 +121,9 @@ export class Profile {
   @Column({ name: 'is_two_factor_enabled', default: false })
   is_two_factor_enabled: boolean;
 
+  @Column({ name: 'must_change_password', default: false })
+  must_change_password: boolean;
+
   @Column({ name: 'patient_id', type: 'uuid', nullable: true })
   patient_id: string;
 

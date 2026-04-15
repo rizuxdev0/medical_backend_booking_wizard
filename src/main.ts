@@ -55,6 +55,9 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import { join } from 'path';
+import { existsSync, mkdirSync } from 'fs';
 import { AppModule } from './app.module';
 import { SnakeCaseInterceptor } from './common/interceptors/snake-case.interceptor';
 import { createAdminUser } from './database/seeders/admin.seeder';
@@ -63,7 +66,18 @@ import { seedBillableItems } from './database/seeders/billable-items.seeder';
 import { api_prefix } from './config/globalVar';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  // Assurer que le dossier d'upload existe
+  const uploadDir = join(__dirname, '..', 'uploads', 'patient-documents');
+  if (!existsSync(uploadDir)) {
+    mkdirSync(uploadDir, { recursive: true });
+  }
+
+  // Servir les fichiers statiques
+  app.useStaticAssets(join(__dirname, '..', 'uploads'), {
+    prefix: '/uploads/',
+  });
 
   // Global prefix
   app.setGlobalPrefix(process.env.API_PREFIX || api_prefix || 'api/v1');

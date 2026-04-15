@@ -140,4 +140,56 @@ export class DashboardService {
       inProgress: entries.filter((e) => e.status === 'in_progress').length,
     };
   }
+
+  async getPractitionerStatuses() {
+    const practitioners = await this.practitionerRepo.find({
+      where: { isActive: true },
+      relations: ['schedules', 'absences', 'guards'],
+    });
+
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+    const dateStr = today.toISOString().split('T')[0];
+
+    return practitioners.map((p) => {
+      // 1. Horaire du jour
+      const todaySchedule = (p.schedules || []).find(
+        (s) => s.dayOfWeek === dayOfWeek && s.isAvailable,
+      );
+
+      // 2. Absence aujourd'hui
+      const currentAbsence = (p.absences || []).find(
+        (a) => dateStr >= a.startDate && dateStr <= a.endDate,
+      );
+
+      // 3. Garde aujourd'hui
+      const currentGuard = (p.guards || []).find((g) => g.guardDate === dateStr);
+
+      // 4. Déterminer le statut actuel
+      let status = 'available';
+      if (currentAbsence) {
+        status = 'absent';
+      } else if (!todaySchedule) {
+        status = 'off';
+      } else if (currentGuard) {
+        status = 'on_guard';
+      }
+
+      return {
+        id: p.id,
+        first_name: p.firstName,
+        last_name: p.lastName,
+        specialty: p.specialty,
+        current_status: status,
+        today_schedule: todaySchedule
+          ? {
+              start: todaySchedule.startTime,
+              end: todaySchedule.endTime,
+            }
+          : null,
+        absence_reason: currentAbsence?.reason || null,
+        guard_info: currentGuard ? 'En garde' : null,
+      };
+    });
+  }
 }

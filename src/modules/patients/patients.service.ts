@@ -134,6 +134,8 @@ export class PatientsService {
       current_medications: 'currentMedications',
       family_history: 'familyHistory',
       vaccination_history: 'vaccinationHistory',
+      insurer_id: 'insurerId',
+      coverage_rate: 'coverageRate',
     };
 
     Object.keys(fieldMappings).forEach((snakeField) => {
@@ -218,6 +220,8 @@ export class PatientsService {
       current_medications: 'currentMedications',
       family_history: 'familyHistory',
       vaccination_history: 'vaccinationHistory',
+      insurer_id: 'insurerId',
+      coverage_rate: 'coverageRate',
     };
 
     Object.keys(fieldMappings).forEach((snakeField) => {
@@ -321,6 +325,8 @@ export class PatientsService {
       insurance_number: patient.insuranceNumber,
       emergency_contact_name: patient.emergencyContactName,
       emergency_contact_phone: patient.emergencyContactPhone,
+      insurer_id: patient.insurerId,
+      coverage_rate: patient.coverageRate ? Number(patient.coverageRate) : 0,
       allergies: patient.allergies,
       medical_notes: patient.medicalNotes,
       notes: patient.notes,
