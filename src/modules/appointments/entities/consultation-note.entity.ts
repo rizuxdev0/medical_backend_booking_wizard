@@ -80,6 +80,9 @@ export class ConsultationNote {
   @Column({ name: 'signature_hash', type: 'text', nullable: true })
   signatureHash: string;
 
+  @Column({ name: 'signature_image', type: 'text', nullable: true })
+  signatureImage: string;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

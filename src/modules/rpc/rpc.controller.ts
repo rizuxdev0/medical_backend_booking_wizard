@@ -1,9 +1,9 @@
-import { Controller, Get, Post, Req, UseGuards, Body } from '@nestjs/common';
+import { Controller, Get, Post, Req, Body } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { UsersService } from '../users/users.service';
 import { SettingsService } from '../settings/settings.service';
 import { RpcService } from './rpc.service';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { Public } from '../../common/decorators/public.decorator';
 
 @ApiTags('rpc')
 @Controller('rpc')
@@ -14,12 +14,14 @@ export class RpcController {
     private readonly rpcService: RpcService,
   ) {}
 
+  @Public()
   @Get('status')
   @ApiOperation({ summary: 'Vérifier le statut du système' })
   async getStatus() {
     return this.rpcService.getSystemStatus();
   }
 
+  @Public()
   @Get('admin-exists')
   @ApiOperation({ summary: 'Vérifier si un admin existe' })
   async adminExists() {
@@ -27,9 +29,11 @@ export class RpcController {
     return { result: exists };
   }
 
+  @Public()
   @Get('is-setup-completed')
   @ApiOperation({ summary: 'Vérifier si le setup est terminé' })
   async setupCompleted() {
+
     const completed = await this.rpcService.isSetupCompleted();
     return { completed };
   }
@@ -40,7 +44,8 @@ export class RpcController {
   async completeSetup() {
     return this.rpcService.completeSetup();
   }
-
+  
+  @Public()
   @Post('bootstrap-admin')
   @ApiOperation({ summary: 'Initialiser le premier compte admin (Public si vide)' })
   async bootstrapPublic() {

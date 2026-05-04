@@ -6,23 +6,66 @@ import {
   Patch,
   UseGuards,
   Request,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { Public } from '../../common/decorators/public.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
+import { ApiTags, ApiBearerAuth, ApiConsumes, ApiBody, ApiOperation } from '@nestjs/swagger';
 
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
   constructor(private authService: AuthService) {}
 
+  @Public()
   @Post('login')
   login(@Body() body: LoginDto) {
     return this.authService.login(body);
   }
 
+  @Post('upload-avatar')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @UseInterceptors(FileInterceptor('file', {
+    storage: diskStorage({
+      destination: './uploads/avatars',
+      filename: (req, file, cb) => {
+        const randomName = Array(32).fill(null).map(() => (Math.round(Math.random() * 16)).toString(16)).join('');
+        cb(null, `${randomName}${extname(file.originalname)}`);
+      },
+    }),
+  }))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
+  @ApiOperation({ summary: 'Uploader une photo de profil' })
+  async uploadAvatar(@UploadedFile() file: any) {
+    if (!file) {
+      return { message: 'Aucun fichier reçu' };
+    }
+    return {
+      message: 'Avatar uploadé avec succès',
+      file_url: `/uploads/avatars/${file.filename}`,
+    };
+  }
+
+  @Public()
   @Post('register')
   register(@Body() body: RegisterDto) {
     return this.authService.register(
@@ -56,9 +99,10 @@ export class AuthController {
   @Patch('update-profile')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  updateProfile(@Request() req, @Body() data: { first_name?: string; last_name?: string; phone?: string }) {
+  updateProfile(@Request() req, @Body() data: { first_name?: string; last_name?: string; phone?: string; avatar_url?: string }) {
     return this.authService.updateProfile(req.user.id, data);
   }
+
 
   @Post('change-password')
   @UseGuards(JwtAuthGuard)

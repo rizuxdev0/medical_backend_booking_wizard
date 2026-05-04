@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In, Between, IsNull } from 'typeorm';
+import { Repository, In, Between, IsNull, DeepPartial } from 'typeorm';
 import { QueueEntry, QueueStatus } from './entities/queue-entry.entity';
 import { QueueSettings } from './entities/queue-settings.entity';
 import { CheckInDto } from './dto/check-in.dto';
@@ -18,7 +18,7 @@ import {
 } from './dto/queue-response.dto';
 import { Patient } from '../patients/entities/patient.entity';
 import { Practitioner } from '../practitioners/entities/practitioner.entity';
-import { Appointment } from '../appointments/entities/appointment.entity';
+import { Appointment, AppointmentStatus } from '../appointments/entities/appointment.entity';
 import { Resource } from '../resources/entities/resource.entity';
 
 @Injectable()
@@ -178,21 +178,20 @@ export class QueueService {
 
     // 6. Créer un rendez-vous si manquant
     if (!checkInDto.appointment_id && checkInDto.practitioner_id) {
-      const apptData = {
+      const appointment = this.appointmentRepo.create({
         patientId: checkInDto.patient_id,
         practitionerId: checkInDto.practitioner_id,
         scheduledAt: new Date(),
-        status: 'confirmed',
+        status: 'confirmed' as AppointmentStatus,
         durationMinutes: 30,
         notes: checkInDto.notes || 'Check-in direct',
-      };
-      const appointment = this.appointmentRepo.create(apptData);
+      });
       const savedAppt = await this.appointmentRepo.save(appointment);
       entry.appointmentId = savedAppt.id;
       await this.queueEntryRepo.save(entry);
     } else if (checkInDto.appointment_id) {
       await this.appointmentRepo.update(checkInDto.appointment_id, {
-        status: 'confirmed',
+        status: 'confirmed' as AppointmentStatus,
       });
     }
 
@@ -275,7 +274,7 @@ export class QueueService {
     // Mettre à jour le rendez-vous si existant
     if (entry.appointmentId) {
       await this.appointmentRepo.update(entry.appointmentId, {
-        status: 'completed',
+        status: 'completed' as AppointmentStatus,
       });
     }
 
@@ -319,6 +318,10 @@ export class QueueService {
     if (dto.status) {
       entry.status = dto.status;
     }
+    
+    if (dto.notes !== undefined) {
+      entry.notes = dto.notes;
+    }
     if (dto.status === QueueStatus.CALLED && !entry.calledTime) {
       entry.calledTime = new Date();
     } else if (dto.status === QueueStatus.IN_PROGRESS && !entry.startTime) {
@@ -339,11 +342,11 @@ export class QueueService {
     if (entry.appointmentId) {
       if (dto.status === QueueStatus.COMPLETED || dto.status === QueueStatus.DISCHARGED) {
         await this.appointmentRepo.update(entry.appointmentId, {
-          status: 'completed',
+          status: 'completed' as AppointmentStatus,
         });
       } else if (dto.status === QueueStatus.NO_SHOW) {
         await this.appointmentRepo.update(entry.appointmentId, {
-          status: 'no_show',
+          status: 'no_show' as AppointmentStatus,
         });
       }
     }

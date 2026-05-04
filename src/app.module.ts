@@ -1,5 +1,9 @@
 import { Module, OnModuleInit } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { DataSource } from 'typeorm';
+import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
+import { RolesGuard } from './common/guards/roles.guard';
+import { PermissionsGuard } from './common/guards/permissions.guard';
 // ... existing imports ...
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -41,9 +45,16 @@ import { SuppliersModule } from './modules/suppliers/suppliers.module';
 import { PurchaseOrdersModule } from './modules/purchase-orders/purchase-orders.module';
 import { VitalSignsModule } from './modules/vital-signs/vital-signs.module';
 import { CareProtocolsModule } from './modules/care-protocols/care-protocols.module';
+import { ExpensesModule } from './modules/expenses/expenses.module';
+import { BackupModule } from './modules/backup/backup.module';
+import { NursingNotesModule } from './modules/nursing-notes/nursing-notes.module';
+import { ScheduleModule } from '@nestjs/schedule';
+import { CommonModule } from './common/common.module';
 
 @Module({
   imports: [
+    CommonModule,
+    ScheduleModule.forRoot(),
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
@@ -103,9 +114,25 @@ import { CareProtocolsModule } from './modules/care-protocols/care-protocols.mod
     PurchaseOrdersModule,
     VitalSignsModule,
     CareProtocolsModule,
+    ExpensesModule,
+    BackupModule,
+    NursingNotesModule,
   ],
   controllers: [],
-  providers: [],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: RolesGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: PermissionsGuard,
+    },
+  ],
 })
 export class AppModule implements OnModuleInit {
   constructor(private dataSource: DataSource) {}
@@ -116,6 +143,19 @@ export class AppModule implements OnModuleInit {
     
     try {
       await queryRunner.query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp";`);
+
+      // Create BackupLogs table
+      await queryRunner.query(`
+        CREATE TABLE IF NOT EXISTS "backup_logs" (
+          "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
+          "filename" character varying NOT NULL,
+          "status" character varying NOT NULL DEFAULT 'IN_PROGRESS',
+          "size" numeric,
+          "errorMessage" text,
+          "createdAt" TIMESTAMP NOT NULL DEFAULT now(),
+          CONSTRAINT "PK_backup_logs" PRIMARY KEY ("id")
+        )
+      `);
 
       // Create Suppliers table
       await queryRunner.query(`
@@ -299,7 +339,20 @@ export class AppModule implements OnModuleInit {
         )
       `);
 
-      console.log('✅ Supply Chain & Documents tables verified/created');
+      // Create Nursing Notes table
+      await queryRunner.query(`
+        CREATE TABLE IF NOT EXISTS "nursing_notes" (
+          "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
+          "patientId" character varying NOT NULL,
+          "authorName" character varying NOT NULL,
+          "content" text NOT NULL,
+          "createdAt" TIMESTAMP NOT NULL DEFAULT now(),
+          "updatedAt" TIMESTAMP NOT NULL DEFAULT now(),
+          CONSTRAINT "PK_nursing_notes" PRIMARY KEY ("id")
+        )
+      `);
+
+      console.log('✅ Supply Chain, Documents & Nursing Notes tables verified/created');
     } catch (error) {
       console.error('❌ Error creating supply chain tables:', error);
     } finally {

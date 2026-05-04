@@ -291,6 +291,13 @@ export class PractitionersService {
     });
   }
 
+  async findAllAbsences(): Promise<PractitionerAbsence[]> {
+    return this.absenceRepo.find({
+      relations: ['practitioner'],
+      order: { startDate: 'DESC' },
+    });
+  }
+
   async addAbsence(
     practitionerId: string,
     createAbsenceDto: CreateAbsenceDto,

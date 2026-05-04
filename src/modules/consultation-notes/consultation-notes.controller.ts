@@ -107,7 +107,10 @@ export class ConsultationNotesController {
   @Post('consultations/:id/sign')
   @Roles('admin', 'doctor')
   @ApiOperation({ summary: 'Signer électroniquement une note de consultation' })
-  sign(@Param('id') id: string): Promise<ConsultationNoteResponseDto> {
-    return this.consultationNotesService.sign(id);
+  sign(
+    @Param('id') id: string,
+    @Body('signature_image') signatureImage?: string,
+  ): Promise<ConsultationNoteResponseDto> {
+    return this.consultationNotesService.sign(id, signatureImage);
   }
 }

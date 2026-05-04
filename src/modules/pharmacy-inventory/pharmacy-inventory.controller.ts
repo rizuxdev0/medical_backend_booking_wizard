@@ -1,42 +1,64 @@
-import { Controller, Get, Post, Body, Patch, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { PharmacyInventoryService } from './pharmacy-inventory.service';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../../common/guards/roles.guard';
-import { Roles } from '../../common/decorators/roles.decorator';
+import { Permissions } from '../../common/decorators/permissions.decorator';
 
 @ApiTags('pharmacy-inventory')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('pharmacy-inventory')
 export class PharmacyInventoryController {
   constructor(private readonly service: PharmacyInventoryService) {}
 
   @Get()
-  @Roles('admin', 'pharmacist', 'doctor')
+  @Permissions('pharmacy.view')
   @ApiOperation({ summary: 'Liste du stock pharmacie' })
   findAll() {
     return this.service.findAll();
   }
+  
+  @Get('alerts')
+  @Permissions('pharmacy.view')
+  @ApiOperation({ summary: 'Récupérer les alertes de stock et péremption' })
+  getAlerts() {
+    return this.service.getAlerts();
+  }
 
   @Post()
-  @Roles('admin', 'pharmacist')
+  @Permissions('pharmacy.manage')
   @ApiOperation({ summary: 'Ajouter un nouvel article' })
   create(@Body() data: any) {
     return this.service.create(data);
   }
 
   @Patch(':id/stock')
-  @Roles('admin', 'pharmacist')
-  @ApiOperation({ summary: 'Ajouter/Retirer du stock (Livraison)' })
-  updateStock(@Param('id') id: string, @Body('quantity') quantity: number) {
-    return this.service.updateStock(id, quantity);
+  @Permissions('pharmacy.manage')
+  @ApiOperation({ summary: 'Ajuster le stock avec enregistrement du mouvement' })
+  updateStock(
+    @Param('id') id: string, 
+    @Body() body: { quantity: number, type?: any, reason?: string, user_id?: string },
+  ) {
+    return this.service.updateStock(id, body.quantity, body.type, body.reason, body.user_id);
+  }
+
+  @Get('movements')
+  @Permissions('pharmacy.view')
+  @ApiOperation({ summary: 'Historique de tous les mouvements de stock' })
+  findAllMovements() {
+    return this.service.findAllMovements();
+  }
+
+  @Get(':id/movements')
+  @Permissions('pharmacy.view')
+  @ApiOperation({ summary: 'Historique des mouvements pour un article' })
+  findMovementsByItem(@Param('id') id: string) {
+    return this.service.findMovementsByItem(id);
   }
 
   @Post('run-automation')
-  @Roles('admin', 'pharmacist')
+  @Permissions('pharmacy.manage')
   @ApiOperation({ summary: 'Lancer manuellement les alertes et commandes auto' })
   runAutomation() {
     return this.service.runInventoryAutomation();
   }
 }
+

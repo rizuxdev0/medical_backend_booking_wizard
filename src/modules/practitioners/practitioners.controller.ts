@@ -52,6 +52,13 @@ export class PractitionersController {
     });
   }
 
+  @Get('absences')
+  @Roles('admin', 'doctor', 'secretary', 'nurse')
+  @ApiOperation({ summary: 'Liste toutes les absences (tous praticiens)' })
+  findAllAbsences() {
+    return this.practitionersService.findAllAbsences();
+  }
+
   @Get(':id')
   @Roles('admin', 'doctor', 'secretary', 'nurse')
   @ApiOperation({ summary: "Détail d'un praticien" })

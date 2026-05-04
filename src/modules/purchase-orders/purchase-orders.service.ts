@@ -53,7 +53,7 @@ export class PurchaseOrdersService {
             unit: 'Unit',
             category: 'Général',
             preferredSupplierId: po.supplierId
-          });
+          } as any);
           await this.inventoryRepo.save(newItem);
         }
       }
@@ -71,7 +71,7 @@ export class PurchaseOrdersService {
     // 2. Group by preferred supplier
     const supplierGroups: Record<string, PharmacyInventory[]> = {};
     for (const item of lowStockItems) {
-      const sId = item.preferredSupplierId || 'default';
+      const sId = (item as any).preferredSupplierId || 'default';
       if (!supplierGroups[sId]) supplierGroups[sId] = [];
       supplierGroups[sId].push(item);
     }

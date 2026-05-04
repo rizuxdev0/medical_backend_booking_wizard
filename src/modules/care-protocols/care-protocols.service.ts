@@ -56,12 +56,16 @@ export class CareProtocolsService {
     const protocol = await this.findOne(id);
     if (!protocol) throw new Error('Protocole non trouvé');
 
+    // In a real app, we would fetch the patient name from patientId here
+    const patientName = "Patient Hospitalisé"; // Placeholder or fetch from patientRepo
+
     const createdTasks: NursingCarePlan[] = [];
     for (const taskTemplate of protocol.tasks) {
       const newTask = await this.nursingService.create({
         patientId,
-        title: taskTemplate.title,
-        category: taskTemplate.category,
+        patientName,
+        task: taskTemplate.title,
+        type: taskTemplate.category,
         description: taskTemplate.instructions || '',
         scheduledAt: new Date(),
         status: 'pending'

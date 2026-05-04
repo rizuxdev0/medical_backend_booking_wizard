@@ -10,12 +10,17 @@ import { CreatePatientDto } from './dto/create-patient.dto';
 import { UpdatePatientDto } from './dto/update-patient.dto';
 import { PatientResponseDto } from './dto/patient-response.dto';
 import { PatientQueryDto } from './dto/patient-query.dto';
+import { PatientConsent } from './entities/patient-consent.entity';
+import { SignConsentDto } from './dto/sign-consent.dto';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class PatientsService {
   constructor(
     @InjectRepository(Patient)
     private patientRepo: Repository<Patient>,
+    @InjectRepository(PatientConsent)
+    private consentRepo: Repository<PatientConsent>,
   ) {}
 
   async findAll(
@@ -300,6 +305,51 @@ export class PatientsService {
     // Cette méthode sera implémentée quand le module invoices sera créé
     // Pour l'instant, retourner un tableau vide
     return [];
+  }
+
+  // ==================== CONSENTEMENTS ====================
+
+  async getConsents(patientId: string): Promise<PatientConsent[]> {
+    return this.consentRepo.find({
+      where: { patientId },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  async signConsent(
+    id: string,
+    dto: SignConsentDto,
+    practitionerId?: string,
+    ipAddress?: string,
+    userAgent?: string,
+  ): Promise<PatientConsent> {
+    const patient = await this.patientRepo.findOne({ where: { id } });
+    if (!patient) {
+      throw new NotFoundException(`Patient avec l'ID ${id} non trouvé`);
+    }
+
+    // Créer le hash de la signature pour l'intégrité
+    const contentToHash = `${id}|${dto.consentType}|${dto.consentText}|${dto.signatureImage.substring(0, 100)}`;
+    const signatureHash = crypto
+      .createHash('sha256')
+      .update(contentToHash)
+      .digest('hex');
+
+    const consent = this.consentRepo.create({
+      patientId: id,
+      practitionerId,
+      consentType: dto.consentType,
+      consentText: dto.consentText,
+      signatureImage: dto.signatureImage,
+      signatureHash,
+      isSigned: true,
+      signedAt: new Date(),
+      witnessName: dto.witnessName,
+      ipAddress,
+      userAgent,
+    });
+
+    return this.consentRepo.save(consent);
   }
 
   private mapToResponse(patient: Patient): PatientResponseDto {

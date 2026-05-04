@@ -2,6 +2,7 @@ import { Injectable, forwardRef, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThanOrEqual } from 'typeorm';
 import { PharmacyInventory } from './entities/pharmacy-inventory.entity';
+import { StockMovement, MovementType } from './entities/stock-movement.entity';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PurchaseOrdersService } from '../purchase-orders/purchase-orders.service';
 
@@ -10,6 +11,8 @@ export class PharmacyInventoryService {
   constructor(
     @InjectRepository(PharmacyInventory)
     private repo: Repository<PharmacyInventory>,
+    @InjectRepository(StockMovement)
+    private movementRepo: Repository<StockMovement>,
     private readonly notifications: NotificationsService,
     @Inject(forwardRef(() => PurchaseOrdersService))
     private readonly purchaseOrders: PurchaseOrdersService,
@@ -90,16 +93,82 @@ export class PharmacyInventoryService {
     return this.repo.findOneBy({ id });
   }
 
-  create(data: any) {
+  async create(data: any) {
     const item = this.repo.create(data);
-    return this.repo.save(item);
+    const savedItem = await this.repo.save(item);
+    
+    // Si on initialise avec du stock, on enregistre le mouvement initial
+    if (savedItem.stock > 0) {
+      await this.recordMovement({
+        itemId: savedItem.id,
+        type: MovementType.IN,
+        quantity: savedItem.stock,
+        reason: 'Stock initial / Création'
+      });
+    }
+    
+    return savedItem;
   }
 
-  async updateStock(id: string, quantity: number) {
+  async updateStock(id: string, quantity: number, type: MovementType = MovementType.ADJUSTMENT, reason?: string, userId?: string) {
     const item = await this.repo.findOneBy({ id });
     if (!item) return null;
-    item.stock += quantity;
-    return this.repo.save(item);
+    
+    // Update stock level
+    item.stock = Number(item.stock) + Number(quantity);
+    const updatedItem = await this.repo.save(item);
+
+    // Record movement
+    await this.recordMovement({
+      itemId: id,
+      type,
+      quantity,
+      reason: reason || 'Mise à jour manuelle',
+      performedById: userId
+    });
+
+    return updatedItem;
+  }
+
+  async recordMovement(data: { itemId: string, type: MovementType, quantity: number, reason: string, performedById?: string }) {
+    const movement = this.movementRepo.create(data);
+    return this.movementRepo.save(movement);
+  }
+
+  findAllMovements() {
+    return this.movementRepo.find({
+      relations: ['item', 'performedBy'],
+      order: { createdAt: 'DESC' }
+    });
+  }
+
+  findMovementsByItem(itemId: string) {
+    return this.movementRepo.find({
+      where: { itemId },
+      relations: ['performedBy'],
+      order: { createdAt: 'DESC' }
+    });
+  }
+
+  async getAlerts() {
+    const threeMonthsFromNow = new Date();
+    threeMonthsFromNow.setMonth(threeMonthsFromNow.getMonth() + 3);
+
+    const expiringSoon = await this.repo.find({
+      where: {
+        expiryDate: LessThanOrEqual(threeMonthsFromNow),
+        status: 'ACTIVE'
+      }
+    });
+
+    const allItems = await this.repo.find();
+    const lowStock = allItems.filter(item => item.stock <= item.minStock);
+
+    return {
+      expiringSoon,
+      lowStock,
+      totalAlerts: expiringSoon.length + lowStock.length
+    };
   }
 
   update(id: string, data: any) {

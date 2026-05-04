@@ -580,21 +580,29 @@ export class AppointmentsService {
     const availablePractitioners: Practitioner[] = [];
 
     // 2. Vérifier pour chaque praticien
+    const results = [];
     for (const p of practitioners) {
       try {
-        await this.checkPractitionerAvailability(p.id, scheduledAt, duration);
+        const schedule = await this.checkPractitionerAvailability(p.id, scheduledAt, duration);
         await this.checkConflicts(p.id, scheduledAt, duration);
-        availablePractitioners.push(p);
+        results.push({
+          ...p,
+          currentSchedule: schedule
+        });
       } catch (e) {
         // Not available, skip
       }
     }
 
-    return availablePractitioners.map((p) => ({
+    return results.map((p) => ({
       id: p.id,
       first_name: p.firstName,
       last_name: p.lastName,
       specialty: p.specialty,
+      schedule: p.currentSchedule ? {
+        start_time: p.currentSchedule.startTime,
+        end_time: p.currentSchedule.endTime
+      } : null,
     }));
   }
 
@@ -604,16 +612,20 @@ export class AppointmentsService {
     practitionerId: string,
     date: Date,
     duration: number,
-  ): Promise<void> {
+  ): Promise<PractitionerSchedule> {
     const dayOfWeek = date.getDay();
-    const dateStr = date.toISOString().split('T')[0];
-
+    // Utiliser la date locale pour éviter le décalage UTC de toISOString()
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
+    
     // 1. Vérifier les absences
     const absences = await this.absenceRepo.find({
       where: {
         practitionerId,
-        startDate: LessThanOrEqual(dateStr),
-        endDate: MoreThanOrEqual(dateStr),
+        startDate: LessThanOrEqual(dateStr as any),
+        endDate: MoreThanOrEqual(dateStr as any),
       },
     });
 
@@ -645,6 +657,8 @@ export class AppointmentsService {
         "L'horaire demandé est en dehors des heures de travail",
       );
     }
+
+    return schedule;
   }
 
   private async checkConflicts(
@@ -667,7 +681,7 @@ export class AppointmentsService {
       })
       .andWhere('appointment.scheduled_at < :endTime', { endTime })
       .andWhere(
-        "(appointment.scheduled_at + (appointment.duration_minutes || ' minutes')::interval) > :startTime",
+        "appointment.scheduled_at + (appointment.duration_minutes * interval '1 minute') > :startTime",
         { startTime },
       );
 

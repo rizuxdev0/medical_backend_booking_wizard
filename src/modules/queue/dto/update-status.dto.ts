@@ -10,4 +10,11 @@ export class UpdateQueueStatusDto {
   @IsString()
   @IsOptional()
   status?: QueueStatus;
+
+  @IsString()
+  @IsOptional()
+  notes?: string;
+
+  @IsOptional()
+  triage_data?: any;
 }

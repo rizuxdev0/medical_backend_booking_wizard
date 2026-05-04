@@ -261,7 +261,7 @@ export class ConsultationNotesService {
     return this.mapToResponse(closedNote);
   }
 
-  async sign(id: string): Promise<ConsultationNoteResponseDto> {
+  async sign(id: string, signatureImage?: string): Promise<ConsultationNoteResponseDto> {
     const note = await this.noteRepo.findOne({
       where: { id },
       relations: ['practitioner', 'patient'],
@@ -277,13 +277,14 @@ export class ConsultationNotesService {
 
     // Create a digital signature hash
     const crypto = require('crypto');
-    const contentToSign = `${note.id}|${note.diagnosis}|${note.treatmentPlan}|${note.createdAt.toISOString()}`;
+    const contentToSign = `${note.id}|${note.diagnosis}|${note.treatmentPlan}|${note.createdAt.toISOString()}|${signatureImage?.substring(0, 50)}`;
     const signatureHash = crypto.createHash('sha256').update(contentToSign).digest('hex');
 
     await this.noteRepo.update(id, {
       isSigned: true,
       signedAt: new Date(),
       signatureHash,
+      signatureImage,
     });
 
     return this.findOne(id);

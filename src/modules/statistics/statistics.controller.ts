@@ -39,5 +39,25 @@ export class StatisticsController {
   async getOccupancy() {
     return this.statisticsService.getOccupancyStats();
   }
+
+  @Get('financial-summary')
+  @Roles('admin', 'doctor', 'nurse', 'receptionist')
+  @ApiOperation({ summary: 'Résumé financier' })
+  async getFinancialSummary(
+    @Query('start') start: string,
+    @Query('end') end: string,
+  ) {
+    return this.statisticsService.getFinancialSummary(start, end);
+  }
+
+  @Get('clinical-activity')
+  @Roles('admin', 'doctor', 'nurse', 'receptionist')
+  @ApiOperation({ summary: 'Activité clinique' })
+  async getClinicalActivity(
+    @Query('start') start: string,
+    @Query('end') end: string,
+  ) {
+    return this.statisticsService.getClinicalActivity(start, end);
+  }
 }
 

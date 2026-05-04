@@ -4,6 +4,8 @@ import { Repository, Between } from 'typeorm';
 import { Appointment } from '../appointments/entities/appointment.entity';
 import { QueueEntry } from '../queue/entities/queue-entry.entity';
 import { InpatientBed } from '../inpatient-beds/entities/inpatient-bed.entity';
+import { Invoice } from '../invoices/entities/invoice.entity';
+import { Patient } from '../patients/entities/patient.entity';
 
 @Injectable()
 export class StatisticsService {
@@ -14,6 +16,10 @@ export class StatisticsService {
     private queueRepo: Repository<QueueEntry>,
     @InjectRepository(InpatientBed)
     private bedRepo: Repository<InpatientBed>,
+    @InjectRepository(Invoice)
+    private invoiceRepo: Repository<Invoice>,
+    @InjectRepository(Patient)
+    private patientRepo: Repository<Patient>,
   ) {}
 
   async getOccupancyStats() {
@@ -73,7 +79,6 @@ export class StatisticsService {
     const startDate = new Date(start);
     const endDate = new Date(end);
 
-    // Returning the raw array of queue entries as per instruction 3
     return this.queueRepo.find({
       where: {
         createdAt: Between(startDate as any, endDate as any),
@@ -81,5 +86,59 @@ export class StatisticsService {
     });
   }
 
+  async getFinancialSummary(start: string, end: string) {
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+
+    const invoices = await this.invoiceRepo.find({
+      where: {
+        issueDate: Between(startDate as any, endDate as any),
+      },
+    });
+
+    const summary = {
+      totalRevenue: 0,
+      totalPaid: 0,
+      totalDue: 0,
+      totalInsurance: 0,
+      invoiceCount: invoices.length,
+      paidCount: invoices.filter(i => i.status === 'paid').length,
+      pendingCount: invoices.filter(i => i.status === 'sent' || i.status === 'partial').length,
+    };
+
+    invoices.forEach(inv => {
+      summary.totalRevenue += Number(inv.totalAmount) || 0;
+      summary.totalPaid += Number(inv.amountPaid) || 0;
+      summary.totalDue += Number(inv.amountDue) || 0;
+      summary.totalInsurance += Number(inv.insuranceAmount) || 0;
+    });
+
+    return summary;
+  }
+
+  async getClinicalActivity(start: string, end: string) {
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+
+    const patientsCount = await this.patientRepo.count();
+    const newPatients = await this.patientRepo.count({
+      where: { createdAt: Between(startDate as any, endDate as any) }
+    });
+
+    const appointmentsCount = await this.appointmentRepo.count({
+      where: { scheduledAt: Between(startDate as any, endDate as any) }
+    });
+
+    const bedAdmissions = await this.bedRepo.count({
+      where: { status: 'occupied' } // Simplified proxy for current occupancy
+    });
+
+    return {
+      totalPatients: patientsCount,
+      newPatients,
+      totalConsultations: appointmentsCount,
+      currentHospitalizations: bedAdmissions,
+    };
+  }
 }
 

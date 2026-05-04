@@ -84,8 +84,7 @@ async function bootstrap() {
 
   // CORS - Important pour le frontend React
   app.enableCors({
-    // origin: process.env.CORS_ORIGIN || 'http://localhost:5173', // Vite default port
-    origin: '*',
+    origin: process.env.CORS_ORIGIN || 'http://localhost:3003', // Vite default port (ajusté selon votre setup)
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],

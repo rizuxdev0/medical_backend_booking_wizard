@@ -6,7 +6,6 @@ import {
   Patch,
   Param,
   Delete,
-  UseGuards,
   Query,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
@@ -17,20 +16,17 @@ import { UpdateStatusDto } from './dto/update-status.dto';
 import { RescheduleDto } from './dto/reschedule.dto';
 import { AppointmentQueryDto } from './dto/appointment-query.dto';
 import { AppointmentResponseDto } from './dto/appointment-response.dto';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../../common/guards/roles.guard';
-import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { Permissions } from '../../common/decorators/permissions.decorator';
 
 @ApiTags('appointments')
 @ApiBearerAuth()
 @Controller('appointments')
-@UseGuards(JwtAuthGuard, RolesGuard)
 export class AppointmentsController {
   constructor(private readonly appointmentsService: AppointmentsService) {}
 
   @Get()
-  @Roles('admin', 'doctor', 'secretary', 'nurse')
+  @Permissions('appointments.view')
   @ApiOperation({ summary: 'Liste des rendez-vous avec filtres' })
   findAll(
     @Query() query: AppointmentQueryDto,
@@ -39,7 +35,7 @@ export class AppointmentsController {
   }
 
   @Get('available-practitioners')
-  @Roles('admin', 'doctor', 'secretary', 'nurse', 'patient')
+  @Permissions('appointments.create')
   @ApiOperation({ summary: 'Liste les praticiens disponibles pour un créneau' })
   findAvailable(
     @Query('scheduled_at') scheduledAt: string,
@@ -52,36 +48,30 @@ export class AppointmentsController {
   }
 
   @Get(':id')
-  @Roles('admin', 'doctor', 'secretary', 'nurse')
+  @Permissions('appointments.view')
   @ApiOperation({ summary: "Détail d'un rendez-vous" })
   findOne(@Param('id') id: string): Promise<AppointmentResponseDto> {
     return this.appointmentsService.findOne(id);
   }
 
   @Get('my/list')
-  @Roles('patient')
   @ApiOperation({ summary: 'Liste mes rendez-vous (en tant que patient)' })
   findMy(@CurrentUser() user): Promise<AppointmentResponseDto[]> {
     return this.appointmentsService.findByUser(user.id);
   }
 
   @Post()
-  @Roles('admin', 'doctor', 'secretary')
+  @Permissions('appointments.create')
   @ApiOperation({ summary: 'Créer un nouveau rendez-vous' })
   async create(
     @Body() createAppointmentDto: CreateAppointmentDto,
     @CurrentUser() user,
   ): Promise<AppointmentResponseDto> {
-    try {
-      return await this.appointmentsService.create(createAppointmentDto, user.id);
-    } catch (e) {
-      require('fs').writeFileSync('appointment_error.log', e.stack || e.message);
-      throw e;
-    }
+    return this.appointmentsService.create(createAppointmentDto, user.id);
   }
 
   @Patch(':id')
-  @Roles('admin', 'doctor', 'secretary')
+  @Permissions('appointments.edit')
   @ApiOperation({ summary: 'Modifier un rendez-vous' })
   update(
     @Param('id') id: string,
@@ -91,7 +81,7 @@ export class AppointmentsController {
   }
 
   @Patch(':id/status')
-  @Roles('admin', 'doctor', 'secretary')
+  @Permissions('appointments.edit')
   @ApiOperation({ summary: "Changer le statut d'un rendez-vous" })
   updateStatus(
     @Param('id') id: string,
@@ -101,7 +91,7 @@ export class AppointmentsController {
   }
 
   @Post(':id/reschedule')
-  @Roles('admin', 'doctor', 'secretary')
+  @Permissions('appointments.edit')
   @ApiOperation({ summary: 'Replanifier un rendez-vous' })
   reschedule(
     @Param('id') id: string,
@@ -111,9 +101,10 @@ export class AppointmentsController {
   }
 
   @Delete(':id')
-  @Roles('admin', 'doctor', 'secretary')
+  @Permissions('appointments.delete')
   @ApiOperation({ summary: 'Annuler un rendez-vous (soft delete)' })
   remove(@Param('id') id: string): Promise<{ message: string }> {
     return this.appointmentsService.remove(id);
   }
 }
+

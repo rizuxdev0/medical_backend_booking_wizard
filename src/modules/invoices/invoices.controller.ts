@@ -6,7 +6,6 @@ import {
   Patch,
   Param,
   Delete,
-  UseGuards,
   Query,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
@@ -20,20 +19,17 @@ import {
   PaymentResponseDto,
   BillingDashboardDto,
 } from './dto/invoice-response.dto';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../../common/guards/roles.guard';
-import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { Permissions } from '../../common/decorators/permissions.decorator';
 
 @ApiTags('invoices')
 @ApiBearerAuth()
 @Controller('invoices')
-@UseGuards(JwtAuthGuard, RolesGuard)
 export class InvoicesController {
   constructor(private readonly invoicesService: InvoicesService) {}
 
   @Get()
-  @Roles('admin', 'accountant', 'secretary')
+  @Permissions('billing.view')
   @ApiOperation({ summary: 'Liste des factures avec filtres' })
   findAll(
     @Query() query: InvoiceQueryDto,
@@ -42,7 +38,7 @@ export class InvoicesController {
   }
 
   @Get('patients/:patientId')
-  @Roles('admin', 'accountant', 'secretary', 'doctor')
+  @Permissions('billing.view')
   @ApiOperation({ summary: "Liste des factures d'un patient" })
   findByPatient(
     @Param('patientId') patientId: string,
@@ -51,28 +47,28 @@ export class InvoicesController {
   }
 
   @Get('unpaid')
-  @Roles('admin', 'accountant')
+  @Permissions('billing.manage')
   @ApiOperation({ summary: 'Liste des factures impayées' })
   getUnpaid(): Promise<InvoiceResponseDto[]> {
     return this.invoicesService.getUnpaidInvoices();
   }
 
   @Get('stats')
-  @Roles('admin', 'accountant')
+  @Permissions('billing.manage')
   @ApiOperation({ summary: 'Tableau de bord de facturation' })
   getStats(): Promise<BillingDashboardDto> {
     return this.invoicesService.getStats();
   }
 
   @Post('reminders/auto')
-  @Roles('admin', 'accountant')
+  @Permissions('billing.manage')
   @ApiOperation({ summary: 'Déclencher les relances automatiques pour impayés' })
   autoSendReminders() {
     return this.invoicesService.autoSendReminders();
   }
 
   @Get('reports/profitability')
-  @Roles('admin', 'accountant')
+  @Permissions('billing.manage')
   @ApiOperation({ summary: 'Rapport de rentabilité par praticien' })
   getProfitabilityReport(
     @Query('from') from: string,
@@ -82,7 +78,7 @@ export class InvoicesController {
   }
 
   @Patch(':id/status')
-  @Roles('admin', 'accountant', 'secretary')
+  @Permissions('billing.manage')
   @ApiOperation({ summary: 'Mettre à jour le statut d\'une facture' })
   updateStatus(
     @Param('id') id: string,
@@ -92,14 +88,14 @@ export class InvoicesController {
   }
 
   @Get(':id')
-  @Roles('admin', 'accountant', 'secretary', 'doctor')
+  @Permissions('billing.view')
   @ApiOperation({ summary: "Détail d'une facture" })
   findOne(@Param('id') id: string): Promise<InvoiceResponseDto> {
     return this.invoicesService.findOne(id);
   }
 
   @Post()
-  @Roles('admin', 'accountant', 'secretary')
+  @Permissions('billing.manage')
   @ApiOperation({ summary: 'Créer une nouvelle facture' })
   create(
     @Body() createInvoiceDto: CreateInvoiceDto,
@@ -109,7 +105,7 @@ export class InvoicesController {
   }
 
   @Patch(':id')
-  @Roles('admin', 'accountant')
+  @Permissions('billing.manage')
   @ApiOperation({ summary: 'Modifier une facture' })
   update(
     @Param('id') id: string,
@@ -119,7 +115,7 @@ export class InvoicesController {
   }
 
   @Post(':id/payments')
-  @Roles('admin', 'accountant', 'secretary')
+  @Permissions('billing.manage')
   @ApiOperation({ summary: 'Ajouter un paiement à une facture' })
   addPayment(
     @Param('id') id: string,
@@ -130,9 +126,11 @@ export class InvoicesController {
   }
 
   @Get(':id/payments')
-  @Roles('admin', 'accountant', 'secretary')
+  @Permissions('billing.view')
   @ApiOperation({ summary: "Liste des paiements d'une facture" })
   getPayments(@Param('id') id: string): Promise<PaymentResponseDto[]> {
     return this.invoicesService.getPayments(id);
   }
+}
+
 }

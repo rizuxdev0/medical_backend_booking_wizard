@@ -6,7 +6,7 @@ export class NursingCarePlan {
   id: string;
 
   @Column()
-  time: string;
+  scheduledAt: Date;
 
   @Column()
   task: string;
@@ -14,14 +14,26 @@ export class NursingCarePlan {
   @Column({ default: 'pending' })
   status: string; // 'done' | 'pending'
 
+  @Column({ nullable: true })
+  patientId: string;
+
   @Column()
   patientName: string;
 
-  @Column()
+  @Column({ nullable: true })
   bedId: string;
 
   @Column({ type: 'varchar', nullable: true })
   type: string; // 'medication' | 'care' | 'monitoring'
+
+  @Column({ nullable: true })
+  description: string;
+
+  @Column({ nullable: true })
+  performedBy: string;
+
+  @Column({ nullable: true })
+  performedAt: Date;
 
   @CreateDateColumn()
   createdAt: Date;

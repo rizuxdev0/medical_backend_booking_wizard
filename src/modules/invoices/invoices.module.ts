@@ -13,7 +13,7 @@ import { Invoice } from './entities/invoice.entity';
 import { Payment } from './entities/payment.entity';
 import { Insurer } from './entities/insurer.entity';
 import { InsurersController } from './insurers.controller';
-
+import { ClaimsService } from './claims.service';
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -29,7 +29,7 @@ import { InsurersController } from './insurers.controller';
     ]),
   ],
   controllers: [InvoicesController, InsurersController],
-  providers: [InvoicesService],
-  exports: [InvoicesService],
+  providers: [InvoicesService, ClaimsService],
+  exports: [InvoicesService, ClaimsService],
 })
 export class InvoicesModule {}
