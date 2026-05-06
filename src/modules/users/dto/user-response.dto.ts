@@ -7,6 +7,7 @@ export class UserResponseDto {
   last_name: string | null;
   phone: string | null;
   avatar_url: string | null;
+  theme_mode: string;
   department: string | null;
   job_title: string | null;
   employee_id: string | null;

@@ -127,6 +127,9 @@ export class Profile {
   @Column({ name: 'patient_id', type: 'uuid', nullable: true })
   patient_id: string;
 
+  @Column({ name: 'theme_mode', type: 'varchar', default: 'light' })
+  theme_mode: string;
+
   @OneToMany(() => UserRole, (role) => role.user)
   roles: UserRole[];
 }

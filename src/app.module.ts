@@ -192,6 +192,61 @@ export class AppModule implements OnModuleInit {
         )
       `);
 
+      // Create Pharmacy Inventory table
+      await queryRunner.query(`
+        CREATE TABLE IF NOT EXISTS "pharmacy_inventory" (
+          "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
+          "name" character varying NOT NULL,
+          "category" character varying,
+          "itemType" character varying NOT NULL DEFAULT 'DRUG',
+          "sku" character varying,
+          "stock" numeric(10,2) NOT NULL DEFAULT 0,
+          "min_stock" numeric(10,2) NOT NULL DEFAULT 10,
+          "location" character varying,
+          "unitPrice" numeric(12,2) DEFAULT 0,
+          "unit" character varying,
+          "batch_number" character varying,
+          "expiry_date" DATE,
+          "status" character varying NOT NULL DEFAULT 'ACTIVE',
+          "preferredSupplierId" character varying,
+          "created_at" TIMESTAMP NOT NULL DEFAULT now(),
+          "updated_at" TIMESTAMP NOT NULL DEFAULT now(),
+          CONSTRAINT "PK_pharmacy_inventory" PRIMARY KEY ("id"),
+          CONSTRAINT "UQ_pharmacy_inventory_sku" UNIQUE ("sku")
+        )
+      `);
+
+      // Create Stock Movements table
+      await queryRunner.query(`
+        CREATE TABLE IF NOT EXISTS "stock_movements" (
+          "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
+          "item_id" uuid NOT NULL,
+          "type" character varying NOT NULL,
+          "quantity" numeric(12,2) NOT NULL,
+          "reason" text,
+          "performed_by_id" uuid,
+          "created_at" TIMESTAMP NOT NULL DEFAULT now(),
+          "updated_at" TIMESTAMP NOT NULL DEFAULT now(),
+          CONSTRAINT "PK_stock_movements" PRIMARY KEY ("id"),
+          CONSTRAINT "FK_stock_movements_item" FOREIGN KEY ("item_id") REFERENCES "pharmacy_inventory"("id") ON DELETE CASCADE
+        )
+      `);
+
+      // Create Pharmacy Prescriptions table
+      await queryRunner.query(`
+        CREATE TABLE IF NOT EXISTS "pharmacy_prescriptions" (
+          "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
+          "patientId" character varying NOT NULL,
+          "patientName" character varying NOT NULL,
+          "ticketCode" character varying,
+          "prescriptions" jsonb NOT NULL,
+          "status" character varying NOT NULL DEFAULT 'pending',
+          "prescribedAt" TIMESTAMP NOT NULL DEFAULT now(),
+          "updatedAt" TIMESTAMP NOT NULL DEFAULT now(),
+          CONSTRAINT "PK_pharmacy_prescriptions" PRIMARY KEY ("id")
+        )
+      `);
+
       // Create Vital Signs table
       await queryRunner.query(`
         CREATE TABLE IF NOT EXISTS "vital_signs" (
@@ -303,7 +358,11 @@ export class AppModule implements OnModuleInit {
 
       await queryRunner.query(`
         ALTER TABLE "profiles"
-        ADD COLUMN IF NOT EXISTS "must_change_password" boolean DEFAULT false
+        ADD COLUMN IF NOT EXISTS "must_change_password" boolean DEFAULT false,
+        ADD COLUMN IF NOT EXISTS "theme_mode" character varying DEFAULT 'light',
+        ADD COLUMN IF NOT EXISTS "two_factor_secret" character varying,
+        ADD COLUMN IF NOT EXISTS "is_two_factor_enabled" boolean DEFAULT false,
+        ADD COLUMN IF NOT EXISTS "patient_id" uuid
       `);
 
       // Create supplier_prices table

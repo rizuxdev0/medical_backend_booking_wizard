@@ -25,7 +25,12 @@ CREATE TABLE profiles (
     is_active BOOLEAN DEFAULT true,
     last_login_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    two_factor_secret VARCHAR(255),
+    is_two_factor_enabled BOOLEAN DEFAULT false,
+    must_change_password BOOLEAN DEFAULT false,
+    patient_id UUID,
+    theme_mode VARCHAR(50) DEFAULT 'light'
 );
 
 -- =============================================

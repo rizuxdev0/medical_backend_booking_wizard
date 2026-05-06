@@ -88,6 +88,18 @@ export class UsersService implements OnModuleInit {
           BEGIN
             ALTER TABLE "profiles" ADD COLUMN IF NOT EXISTS "must_change_password" boolean DEFAULT false;
           EXCEPTION WHEN OTHERS THEN RAISE NOTICE 'profiles.must_change_password already exists'; END;
+
+          BEGIN
+            ALTER TABLE "profiles" ADD COLUMN IF NOT EXISTS "theme_mode" character varying DEFAULT 'light';
+          EXCEPTION WHEN OTHERS THEN RAISE NOTICE 'profiles.theme_mode already exists'; END;
+
+          BEGIN
+            ALTER TABLE "profiles" ADD COLUMN IF NOT EXISTS "two_factor_secret" character varying;
+          EXCEPTION WHEN OTHERS THEN RAISE NOTICE 'profiles.two_factor_secret already exists'; END;
+
+          BEGIN
+            ALTER TABLE "profiles" ADD COLUMN IF NOT EXISTS "is_two_factor_enabled" boolean DEFAULT false;
+          EXCEPTION WHEN OTHERS THEN RAISE NOTICE 'profiles.is_two_factor_enabled already exists'; END;
           
           -- Drop problematic types
           BEGIN DROP TYPE IF EXISTS "public"."app_role" CASCADE; EXCEPTION WHEN OTHERS THEN END;

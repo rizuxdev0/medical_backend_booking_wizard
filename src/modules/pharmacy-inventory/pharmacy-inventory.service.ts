@@ -95,7 +95,7 @@ export class PharmacyInventoryService {
 
   async create(data: any) {
     const item = this.repo.create(data);
-    const savedItem = await this.repo.save(item);
+    const savedItem = await this.repo.save(item) as any;
     
     // Si on initialise avec du stock, on enregistre le mouvement initial
     if (savedItem.stock > 0) {

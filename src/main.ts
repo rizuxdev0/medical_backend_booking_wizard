@@ -68,15 +68,20 @@ import { api_prefix } from './config/globalVar';
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-  // Assurer que le dossier d'upload existe
-  const uploadDir = join(__dirname, '..', 'uploads', 'patient-documents');
-  if (!existsSync(uploadDir)) {
-    mkdirSync(uploadDir, { recursive: true });
-  }
+  // Assurer que les dossiers d'upload existent
+  const uploadsDir = join(process.cwd(), 'uploads');
+  const patientDocsDir = join(uploadsDir, 'patient-documents');
+  const avatarsDir = join(uploadsDir, 'avatars');
+
+  [uploadsDir, patientDocsDir, avatarsDir].forEach((dir) => {
+    if (!existsSync(dir)) {
+      mkdirSync(dir, { recursive: true });
+    }
+  });
 
   // Servir les fichiers statiques
-  app.useStaticAssets(join(__dirname, '..', 'uploads'), {
-    prefix: '/uploads/',
+  app.useStaticAssets(uploadsDir, {
+    prefix: '/uploads',
   });
 
   // Global prefix
@@ -122,7 +127,7 @@ async function bootstrap() {
   console.log(`🚀 Server running on http://localhost:${port}`);
   console.log(`📚 API docs: http://localhost:${port}/docs`);
   console.log(
-    `🔌 CORS enabled for: ${process.env.CORS_ORIGIN || 'http://localhost:5173'}`,
+    `🔌 CORS enabled for: ${process.env.CORS_ORIGIN || 'http://localhost:3003'}`,
   );
 }
 bootstrap();

@@ -291,7 +291,7 @@ export class AuthService {
     return isValid;
   }
 
-  async updateProfile(userId: string, data: { first_name?: string; last_name?: string; phone?: string; avatar_url?: string }) {
+  async updateProfile(userId: string, data: { first_name?: string; last_name?: string; phone?: string; avatar_url?: string; theme_mode?: string }) {
     const user = await this.profileRepo.findOne({ where: { id: userId } });
     if (!user) throw new UnauthorizedException('Utilisateur non trouvé');
 

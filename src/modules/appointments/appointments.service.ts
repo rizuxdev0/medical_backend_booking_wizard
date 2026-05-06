@@ -580,7 +580,7 @@ export class AppointmentsService {
     const availablePractitioners: Practitioner[] = [];
 
     // 2. Vérifier pour chaque praticien
-    const results = [];
+    const results: any[] = [];
     for (const p of practitioners) {
       try {
         const schedule = await this.checkPractitionerAvailability(p.id, scheduledAt, duration);

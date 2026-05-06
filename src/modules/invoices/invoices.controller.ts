@@ -132,5 +132,3 @@ export class InvoicesController {
     return this.invoicesService.getPayments(id);
   }
 }
-
-}

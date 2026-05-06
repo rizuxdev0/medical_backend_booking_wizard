@@ -1,6 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { PharmacyInventory } from './pharmacy-inventory.entity';
-import { User } from '../../users/entities/user.entity';
+import { Profile } from '../../users/entities/profile.entity';
 
 export enum MovementType {
   IN = 'IN',           // Entrée (achat, retour patient)
@@ -36,9 +36,9 @@ export class StockMovement {
   @Column({ name: 'performed_by_id', nullable: true })
   performedById: string;
 
-  @ManyToOne(() => User)
+  @ManyToOne(() => Profile)
   @JoinColumn({ name: 'performed_by_id' })
-  performedBy: User;
+  performedBy: Profile;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
